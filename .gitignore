@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+.env
+.venv/
+.pytest_cache/
+.pytest_tmp/
+.vscode/
+.tmp/
+.tmp/*
+.vendor/
+.docker-config/
+tmp/
+data/
+tests_runtime/
+pytest-cache-files-*/
+.idea

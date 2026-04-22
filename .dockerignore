@@ -1,0 +1,13 @@
+﻿.git
+.gitignore
+.idea
+.venv
+.vendor
+.pytest_cache
+__pycache__
+*.pyc
+tests
+tmp
+pytest-cache-files-*
+read_pdf.py
+.env

@@ -1,0 +1,112 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: netauto-redis
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  netauto-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: netauto-api
+    environment:
+      NAA_INVENTORY_BACKEND: ${NAA_INVENTORY_BACKEND:-mock}
+      NAA_EXECUTION_BACKEND: ${NAA_EXECUTION_BACKEND:-mock}
+      NAA_TASK_QUEUE_BACKEND: ${NAA_TASK_QUEUE_BACKEND:-celery}
+      NAA_API_KEY: ${NAA_API_KEY:-}
+      NAA_RBAC_ENABLED: ${NAA_RBAC_ENABLED:-false}
+      NAA_DATABASE_PATH: ${NAA_DATABASE_PATH:-data/netauto.db}
+      NAA_MOCK_STATE_PATH: ${NAA_MOCK_STATE_PATH:-data/mock_device_state.json}
+      NAA_OPERATION_JOURNAL_PATH: ${NAA_OPERATION_JOURNAL_PATH:-data/operation_journal.json}
+      NAA_BOOTSTRAP_ADMIN_USERNAME: ${NAA_BOOTSTRAP_ADMIN_USERNAME:-admin}
+      NAA_BOOTSTRAP_ADMIN_PASSWORD: ${NAA_BOOTSTRAP_ADMIN_PASSWORD:-admin}
+      NAA_BOOTSTRAP_OPERATOR_USERNAME: ${NAA_BOOTSTRAP_OPERATOR_USERNAME:-operator}
+      NAA_BOOTSTRAP_OPERATOR_PASSWORD: ${NAA_BOOTSTRAP_OPERATOR_PASSWORD:-operator}
+      NAA_BOOTSTRAP_VIEWER_USERNAME: ${NAA_BOOTSTRAP_VIEWER_USERNAME:-viewer}
+      NAA_BOOTSTRAP_VIEWER_PASSWORD: ${NAA_BOOTSTRAP_VIEWER_PASSWORD:-viewer}
+      NAA_NETBOX_URL: ${NAA_NETBOX_URL:-}
+      NAA_NETBOX_TOKEN: ${NAA_NETBOX_TOKEN:-}
+      NAA_CELERY_BROKER_URL: ${NAA_CELERY_BROKER_URL:-redis://redis:6379/0}
+      NAA_CELERY_RESULT_BACKEND: ${NAA_CELERY_RESULT_BACKEND:-redis://redis:6379/1}
+      NAA_CELERY_QUEUE_NAME: ${NAA_CELERY_QUEUE_NAME:-automation}
+      NAA_DEVICE_USERNAME: ${NAA_DEVICE_USERNAME:-}
+      NAA_DEVICE_PASSWORD: ${NAA_DEVICE_PASSWORD:-}
+      NAA_DEVICE_SECRET: ${NAA_DEVICE_SECRET:-}
+      NAA_DEVICE_PORT: ${NAA_DEVICE_PORT:-22}
+      NAA_RUNNING_CONFIG_COMMAND: ${NAA_RUNNING_CONFIG_COMMAND:-show running-config}
+    depends_on:
+      redis:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3).read()",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  celery-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: netauto-celery-worker
+    command:
+      [
+        "celery",
+        "-A",
+        "app.celery_tasks",
+        "worker",
+        "--loglevel=INFO",
+        "--queues=automation",
+      ]
+    environment:
+      NAA_INVENTORY_BACKEND: ${NAA_INVENTORY_BACKEND:-mock}
+      NAA_EXECUTION_BACKEND: ${NAA_EXECUTION_BACKEND:-mock}
+      NAA_TASK_QUEUE_BACKEND: ${NAA_TASK_QUEUE_BACKEND:-celery}
+      NAA_API_KEY: ${NAA_API_KEY:-}
+      NAA_RBAC_ENABLED: ${NAA_RBAC_ENABLED:-false}
+      NAA_DATABASE_PATH: ${NAA_DATABASE_PATH:-data/netauto.db}
+      NAA_MOCK_STATE_PATH: ${NAA_MOCK_STATE_PATH:-data/mock_device_state.json}
+      NAA_OPERATION_JOURNAL_PATH: ${NAA_OPERATION_JOURNAL_PATH:-data/operation_journal.json}
+      NAA_BOOTSTRAP_ADMIN_USERNAME: ${NAA_BOOTSTRAP_ADMIN_USERNAME:-admin}
+      NAA_BOOTSTRAP_ADMIN_PASSWORD: ${NAA_BOOTSTRAP_ADMIN_PASSWORD:-admin}
+      NAA_BOOTSTRAP_OPERATOR_USERNAME: ${NAA_BOOTSTRAP_OPERATOR_USERNAME:-operator}
+      NAA_BOOTSTRAP_OPERATOR_PASSWORD: ${NAA_BOOTSTRAP_OPERATOR_PASSWORD:-operator}
+      NAA_BOOTSTRAP_VIEWER_USERNAME: ${NAA_BOOTSTRAP_VIEWER_USERNAME:-viewer}
+      NAA_BOOTSTRAP_VIEWER_PASSWORD: ${NAA_BOOTSTRAP_VIEWER_PASSWORD:-viewer}
+      NAA_NETBOX_URL: ${NAA_NETBOX_URL:-}
+      NAA_NETBOX_TOKEN: ${NAA_NETBOX_TOKEN:-}
+      NAA_CELERY_BROKER_URL: ${NAA_CELERY_BROKER_URL:-redis://redis:6379/0}
+      NAA_CELERY_RESULT_BACKEND: ${NAA_CELERY_RESULT_BACKEND:-redis://redis:6379/1}
+      NAA_CELERY_QUEUE_NAME: ${NAA_CELERY_QUEUE_NAME:-automation}
+      NAA_DEVICE_USERNAME: ${NAA_DEVICE_USERNAME:-}
+      NAA_DEVICE_PASSWORD: ${NAA_DEVICE_PASSWORD:-}
+      NAA_DEVICE_SECRET: ${NAA_DEVICE_SECRET:-}
+      NAA_DEVICE_PORT: ${NAA_DEVICE_PORT:-22}
+      NAA_RUNNING_CONFIG_COMMAND: ${NAA_RUNNING_CONFIG_COMMAND:-show running-config}
+    depends_on:
+      redis:
+        condition: service_healthy
+      netauto-api:
+        condition: service_started
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped

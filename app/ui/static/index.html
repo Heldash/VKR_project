@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NetAuto MVP Dashboard</title>
+    <link rel="stylesheet" href="/ui/static/styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">VKR / Network Automation MVP</p>
+          <h1>Панель управления тестовым стендом</h1>
+          <p class="hero-text">
+            Интерфейс помогает быстро проверить готовность сервиса, увидеть
+            архитектуру решения, состояние тестовых маршрутизаторов и историю
+            задач автоматизации перед демонстрацией ВКР.
+          </p>
+        </div>
+        <div class="hero-actions">
+          <a class="hero-link" href="/docs" target="_blank" rel="noreferrer">Swagger UI</a>
+          <a class="hero-link secondary" href="/openapi.json" target="_blank" rel="noreferrer">OpenAPI</a>
+        </div>
+      </header>
+
+      <main class="dashboard-grid">
+        <section class="panel panel-connection">
+          <div class="panel-heading">
+            <h2>Подключение к API</h2>
+            <button id="refresh-all" type="button">Обновить данные</button>
+          </div>
+          <form id="connection-form" class="connection-form">
+            <label>
+              <span>Базовый путь API</span>
+              <input id="base-url" name="baseUrl" type="text" value="/api" />
+            </label>
+            <label>
+              <span>X-API-Key</span>
+              <input id="api-key" name="apiKey" type="password" placeholder="Необязательно" />
+            </label>
+            <label>
+              <span>RBAC логин</span>
+              <input id="username" name="username" type="text" placeholder="operator" />
+            </label>
+            <label>
+              <span>RBAC пароль</span>
+              <input id="password" name="password" type="password" placeholder="operator" />
+            </label>
+          </form>
+          <p id="connection-status" class="status-line muted">
+            Настройки подключаются локально в браузере и не отправляются, пока не нажата кнопка обновления.
+          </p>
+        </section>
+
+        <section class="panel panel-architecture">
+          <div class="panel-heading">
+            <h2>Архитектура MVP</h2>
+          </div>
+          <div class="architecture-map">
+            <article>
+              <h3>UI / API</h3>
+              <p>FastAPI принимает запросы, показывает документацию и даёт единый HTTP-контур.</p>
+            </article>
+            <article>
+              <h3>Inventory</h3>
+              <p>Mock inventory и NetBox adapter формируют источник устройств и атрибутов.</p>
+            </article>
+            <article>
+              <h3>Automation Core</h3>
+              <p>Nornir orchestration, профили, selector, compliance и batch-операции.</p>
+            </article>
+            <article>
+              <h3>Execution</h3>
+              <p>Mock backend для стенда и Netmiko backend для реального виртуального роутера.</p>
+            </article>
+            <article>
+              <h3>State / Audit</h3>
+              <p>SQLite, JSON state, snapshots, operation journal, jobs и Celery workflow.</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="panel panel-overview">
+          <div class="panel-heading">
+            <h2>Общий статус</h2>
+          </div>
+          <div class="stats-grid">
+            <article class="stat-card">
+              <span class="label">API</span>
+              <strong id="health-value">-</strong>
+              <small id="health-meta">ожидание запроса</small>
+            </article>
+            <article class="stat-card">
+              <span class="label">БД</span>
+              <strong id="database-value">-</strong>
+              <small id="database-meta">roles/users</small>
+            </article>
+            <article class="stat-card">
+              <span class="label">Устройства</span>
+              <strong id="devices-value">-</strong>
+              <small id="devices-meta">reachable / maintenance</small>
+            </article>
+            <article class="stat-card">
+              <span class="label">Профили</span>
+              <strong id="profiles-value">-</strong>
+              <small id="profiles-meta">готовые шаблоны</small>
+            </article>
+            <article class="stat-card">
+              <span class="label">Задачи</span>
+              <strong id="jobs-value">-</strong>
+              <small id="jobs-meta">очередь автоматизации</small>
+            </article>
+            <article class="stat-card">
+              <span class="label">Операции</span>
+              <strong id="operations-value">-</strong>
+              <small id="operations-meta">успешные / ошибочные</small>
+            </article>
+          </div>
+        </section>
+
+        <section class="panel panel-devices">
+          <div class="panel-heading">
+            <h2>Тестовый стенд</h2>
+            <span id="devices-caption" class="caption">Инвентарь устройств</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Устройство</th>
+                  <th>Площадка</th>
+                  <th>Роль</th>
+                  <th>Статус</th>
+                  <th>Mgmt IP</th>
+                </tr>
+              </thead>
+              <tbody id="devices-table">
+                <tr><td colspan="5" class="placeholder">Данные ещё не загружены</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel panel-profiles">
+          <div class="panel-heading">
+            <h2>Профили конфигурации</h2>
+          </div>
+          <div id="profiles-list" class="stack-list">
+            <p class="placeholder">Данные ещё не загружены</p>
+          </div>
+        </section>
+
+        <section class="panel panel-jobs">
+          <div class="panel-heading">
+            <h2>Очередь задач</h2>
+          </div>
+          <div id="jobs-list" class="stack-list">
+            <p class="placeholder">Данные ещё не загружены</p>
+          </div>
+        </section>
+
+        <section class="panel panel-operations">
+          <div class="panel-heading">
+            <h2>История операций</h2>
+          </div>
+          <div id="operations-list" class="stack-list">
+            <p class="placeholder">Данные ещё не загружены</p>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/ui/static/app.js"></script>
+  </body>
+</html>

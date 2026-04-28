@@ -67,7 +67,7 @@ class BaseConfigurationRequest(BaseModel):
 
     hostname: str
     domain_name: str = "lab.local"
-    banner_motd: str = "Managed by NetAuto MVP"
+    banner_motd: str = "Managed by NetAuto"
     ntp_server: str | None = None
     interfaces: list[InterfaceSpec] = Field(default_factory=list)
 

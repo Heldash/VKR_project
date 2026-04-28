@@ -9,6 +9,15 @@ const appState = {
   selectedDevice: null,
 };
 
+function buildInterfaceDraft(iface = {}) {
+  return {
+    name: iface.name || "",
+    description: iface.description || "",
+    ipv4_address: iface.ipv4_address || "",
+    enabled: iface.enabled ?? true,
+  };
+}
+
 function loadSettings() {
   try {
     return JSON.parse(window.localStorage.getItem(STORAGE_KEY) || "{}");
@@ -328,37 +337,81 @@ function renderDeviceDetail(device, runningConfigLines, runningConfigError = "",
   `;
 }
 
+function buildInterfaceEditorCard(iface, index) {
+  return `
+    <article class="interface-editor" data-index="${index}">
+      <div class="interface-editor-header">
+        <strong>Port ${index + 1}</strong>
+        <div class="interface-editor-actions">
+          <label class="checkbox-inline">
+            <input type="checkbox" data-field="enabled" ${iface.enabled ? "checked" : ""} />
+            <span>Enabled</span>
+          </label>
+          <button type="button" class="secondary-action remove-interface">Remove</button>
+        </div>
+      </div>
+      <label>
+        <span>Port name</span>
+        <input type="text" data-field="name" value="${escapeHtml(iface.name)}" placeholder="GigabitEthernet0/0" />
+      </label>
+      <label>
+        <span>Description</span>
+        <input type="text" data-field="description" value="${escapeHtml(iface.description || "")}" />
+      </label>
+      <label>
+        <span>IPv4 / prefix</span>
+        <input type="text" data-field="ipv4_address" value="${escapeHtml(iface.ipv4_address || "")}" placeholder="10.0.12.1/30" />
+      </label>
+    </article>
+  `;
+}
+
+function refreshInterfaceEditorTitles() {
+  document.querySelectorAll(".interface-editor").forEach((node, index) => {
+    node.dataset.index = String(index);
+    const title = node.querySelector(".interface-editor-header strong");
+    if (title) {
+      title.textContent = `Port ${index + 1}`;
+    }
+  });
+}
+
+function attachInterfaceEditorEvents() {
+  document.querySelectorAll(".remove-interface").forEach((button) => {
+    button.onclick = () => {
+      button.closest(".interface-editor")?.remove();
+      const container = document.getElementById("config-interfaces");
+      if (!container.querySelector(".interface-editor")) {
+        container.innerHTML = '<p class="placeholder">No configured ports yet. Use "Add port" to build the request.</p>';
+      }
+      refreshInterfaceEditorTitles();
+    };
+  });
+}
+
+function appendInterfaceEditor(iface = buildInterfaceDraft()) {
+  const container = document.getElementById("config-interfaces");
+  const placeholder = container.querySelector(".placeholder");
+  if (placeholder) {
+    container.innerHTML = "";
+  }
+  const nextIndex = container.querySelectorAll(".interface-editor").length;
+  container.insertAdjacentHTML("beforeend", buildInterfaceEditorCard(iface, nextIndex));
+  attachInterfaceEditorEvents();
+  refreshInterfaceEditorTitles();
+}
+
 function buildInterfaceEditor(interfaces) {
   const container = document.getElementById("config-interfaces");
-  if (!interfaces.length) {
-    container.innerHTML = '<p class="placeholder">Интерфейсы не описаны.</p>';
+  const drafts = (interfaces || []).map((iface) => buildInterfaceDraft(iface));
+  if (!drafts.length) {
+    container.innerHTML = '<p class="placeholder">No configured ports yet. Use "Add port" to build the request.</p>';
     return;
   }
 
-  container.innerHTML = interfaces
-    .map(
-      (iface, index) => `
-        <article class="interface-editor" data-index="${index}">
-          <div class="interface-editor-header">
-            <strong>${escapeHtml(iface.name)}</strong>
-            <label class="checkbox-inline">
-              <input type="checkbox" data-field="enabled" ${iface.enabled ? "checked" : ""} />
-              <span>Enabled</span>
-            </label>
-          </div>
-          <input type="hidden" data-field="name" value="${escapeHtml(iface.name)}" />
-          <label>
-            <span>Description</span>
-            <input type="text" data-field="description" value="${escapeHtml(iface.description || "")}" />
-          </label>
-          <label>
-            <span>IPv4 / prefix</span>
-            <input type="text" data-field="ipv4_address" value="${escapeHtml(iface.ipv4_address || "")}" placeholder="10.0.12.1/30" />
-          </label>
-        </article>
-      `,
-    )
-    .join("");
+  container.innerHTML = drafts.map((iface, index) => buildInterfaceEditorCard(iface, index)).join("");
+  attachInterfaceEditorEvents();
+  refreshInterfaceEditorTitles();
 }
 
 function populateConfigForm(device) {
@@ -375,15 +428,17 @@ function collectConfigPayload() {
   const domainName = document.getElementById("config-domain").value.trim() || DEFAULT_DOMAIN;
   const bannerMotd = document.getElementById("config-banner").value.trim() || DEFAULT_BANNER;
   const ntpServer = document.getElementById("config-ntp").value.trim();
-  const interfaces = Array.from(document.querySelectorAll(".interface-editor")).map((node) => {
-    const readField = (name) => node.querySelector(`[data-field="${name}"]`);
-    return {
-      name: readField("name").value.trim(),
-      description: readField("description").value.trim(),
-      ipv4_address: readField("ipv4_address").value.trim() || null,
-      enabled: Boolean(readField("enabled").checked),
-    };
-  });
+  const interfaces = Array.from(document.querySelectorAll(".interface-editor"))
+    .map((node) => {
+      const readField = (name) => node.querySelector(`[data-field="${name}"]`);
+      return {
+        name: readField("name").value.trim(),
+        description: readField("description").value.trim(),
+        ipv4_address: readField("ipv4_address").value.trim() || null,
+        enabled: Boolean(readField("enabled").checked),
+      };
+    })
+    .filter((iface) => iface.name);
 
   return {
     hostname,
@@ -552,5 +607,9 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("dry-run-config").addEventListener("click", () => runAutomation("dry-run"));
   document.getElementById("apply-config").addEventListener("click", () => runAutomation("apply"));
   document.getElementById("reset-config").addEventListener("click", resetConfigForm);
+  document.getElementById("add-interface").addEventListener("click", () => {
+    appendInterfaceEditor();
+    setStatus("Added a new port row. Fill in the interface name and IP before running automation.");
+  });
   refreshDashboard();
 });

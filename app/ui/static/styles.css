@@ -465,6 +465,31 @@ th {
   margin: 0;
 }
 
+.subsection-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
+.secondary-action {
+  min-width: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--ink);
+}
+
+.secondary-action:hover {
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.interface-editor-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .button-row {
   display: flex;
   gap: 12px;

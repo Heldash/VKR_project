@@ -27,6 +27,7 @@ async def test_ui_dashboard_page_is_served():
     assert response.status_code == 200
     assert "NetAuto" in response.text
     assert "Swagger UI" in response.text
+    assert "add-interface" in response.text
 
 
 @pytest.mark.asyncio

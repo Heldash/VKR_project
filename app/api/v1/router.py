@@ -690,10 +690,7 @@ async def get_running_config(
 ) -> RunningConfigResponse:
     """Returns the current running configuration from the selected backend."""
     try:
-        return RunningConfigResponse(
-            device_name=device_name,
-            lines=automation_service.get_running_config(device_name),
-        )
+        return automation_service.get_running_config_response(device_name)
     except DeviceNotFoundError as exc:
         raise_not_found(exc)
     except AutomationExecutionError as exc:

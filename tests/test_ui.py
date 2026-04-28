@@ -1,4 +1,4 @@
-import pytest
+﻿import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.main import create_app
@@ -25,7 +25,8 @@ async def test_ui_dashboard_page_is_served():
         response = await ac.get("/ui")
 
     assert response.status_code == 200
-    assert "Панель управления тестовым стендом" in response.text
+    assert "NetAuto" in response.text
+    assert "Swagger UI" in response.text
 
 
 @pytest.mark.asyncio

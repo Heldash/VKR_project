@@ -2,7 +2,9 @@
 
 from nornir.core import Nornir
 from nornir.core.inventory import ConnectionOptions, Defaults, Host, Inventory
+from nornir.core.plugins.connections import ConnectionPluginRegister
 from nornir.plugins.runners import SerialRunner
+from nornir_netmiko.connections import Netmiko
 
 from app.core.config import settings
 from app.domain.models import MockRouter
@@ -10,6 +12,7 @@ from app.domain.models import MockRouter
 
 def build_nornir(devices: list[MockRouter]) -> Nornir:
     """Creates a serial Nornir runner over the current inventory."""
+    ConnectionPluginRegister.register("netmiko", Netmiko)
 
     defaults = Defaults(
         username=settings.device_username,

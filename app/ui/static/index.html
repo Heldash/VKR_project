@@ -3,19 +3,18 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>NetAuto MVP Dashboard</title>
+    <title>NetAuto Dashboard</title>
     <link rel="stylesheet" href="/ui/static/styles.css" />
   </head>
   <body>
     <div class="page-shell">
       <header class="hero">
         <div class="hero-copy">
-          <p class="eyebrow">VKR / Network Automation MVP</p>
-          <h1>Панель управления тестовым стендом</h1>
+          <p class="eyebrow">NetAuto</p>
+          <h1>Панель управления сетевыми устройствами</h1>
           <p class="hero-text">
-            Интерфейс помогает быстро проверить готовность сервиса, увидеть
-            архитектуру решения, состояние тестовых маршрутизаторов и историю
-            задач автоматизации перед демонстрацией ВКР.
+            Интерфейс помогает быстро проверить состояние сервиса, устройств,
+            очереди задач и истории операций автоматизации.
           </p>
         </div>
         <div class="hero-actions">
@@ -51,34 +50,6 @@
           <p id="connection-status" class="status-line muted">
             Настройки подключаются локально в браузере и не отправляются, пока не нажата кнопка обновления.
           </p>
-        </section>
-
-        <section class="panel panel-architecture">
-          <div class="panel-heading">
-            <h2>Архитектура MVP</h2>
-          </div>
-          <div class="architecture-map">
-            <article>
-              <h3>UI / API</h3>
-              <p>FastAPI принимает запросы, показывает документацию и даёт единый HTTP-контур.</p>
-            </article>
-            <article>
-              <h3>Inventory</h3>
-              <p>Mock inventory и NetBox adapter формируют источник устройств и атрибутов.</p>
-            </article>
-            <article>
-              <h3>Automation Core</h3>
-              <p>Nornir orchestration, профили, selector, compliance и batch-операции.</p>
-            </article>
-            <article>
-              <h3>Execution</h3>
-              <p>Mock backend для стенда и Netmiko backend для реального виртуального роутера.</p>
-            </article>
-            <article>
-              <h3>State / Audit</h3>
-              <p>SQLite, JSON state, snapshots, operation journal, jobs и Celery workflow.</p>
-            </article>
-          </div>
         </section>
 
         <section class="panel panel-overview">
@@ -121,8 +92,11 @@
 
         <section class="panel panel-devices">
           <div class="panel-heading">
-            <h2>Тестовый стенд</h2>
-            <span id="devices-caption" class="caption">Инвентарь устройств</span>
+            <div>
+              <h2>Устройства</h2>
+              <span id="devices-caption" class="caption">Инвентарь устройств</span>
+            </div>
+            <span class="caption">Нажми на строку, чтобы открыть карточку</span>
           </div>
           <div class="table-wrap">
             <table>
@@ -139,6 +113,73 @@
                 <tr><td colspan="5" class="placeholder">Данные ещё не загружены</td></tr>
               </tbody>
             </table>
+          </div>
+        </section>
+
+        <section class="panel panel-device-detail">
+          <div class="panel-heading">
+            <div>
+              <h2>Состояние устройства</h2>
+              <span id="device-caption" class="caption">Выбери устройство из списка</span>
+            </div>
+            <span id="device-status-badge" class="badge">-</span>
+          </div>
+          <div id="device-detail" class="detail-layout">
+            <p class="placeholder">Данные устройства появятся после выбора в таблице.</p>
+          </div>
+        </section>
+
+        <section class="panel panel-configurator">
+          <div class="panel-heading">
+            <div>
+              <h2>Автоматическая настройка</h2>
+              <span id="config-device-name" class="caption">Устройство не выбрано</span>
+            </div>
+            <button id="reset-config" type="button">Сбросить форму</button>
+          </div>
+          <form id="device-config-form" class="automation-form">
+            <div class="form-grid">
+              <label>
+                <span>Hostname</span>
+                <input id="config-hostname" type="text" name="hostname" required />
+              </label>
+              <label>
+                <span>Domain name</span>
+                <input id="config-domain" type="text" name="domain_name" value="lab.local" required />
+              </label>
+              <label>
+                <span>Banner MOTD</span>
+                <input id="config-banner" type="text" name="banner_motd" value="Managed by NetAuto" required />
+              </label>
+              <label>
+                <span>NTP server</span>
+                <input id="config-ntp" type="text" name="ntp_server" placeholder="Необязательно" />
+              </label>
+            </div>
+
+            <div class="panel-subsection">
+              <div class="panel-heading compact">
+                <h3>Интерфейсы</h3>
+                <span class="caption">Настраиваются интерфейсы выбранного устройства</span>
+              </div>
+              <div id="config-interfaces" class="interface-editor-list">
+                <p class="placeholder">Сначала выбери устройство.</p>
+              </div>
+            </div>
+
+            <div class="button-row">
+              <button id="preview-config" type="button">Preview</button>
+              <button id="dry-run-config" type="button">Dry run</button>
+              <button id="apply-config" type="button">Apply</button>
+            </div>
+          </form>
+
+          <div class="panel-subsection">
+            <div class="panel-heading compact">
+              <h3>Результат операции</h3>
+              <span id="automation-result-caption" class="caption">Пока ничего не запускалось</span>
+            </div>
+            <pre id="automation-result" class="code-block placeholder">Выбери устройство и запусти preview, dry-run или apply.</pre>
           </div>
         </section>
 

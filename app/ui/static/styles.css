@@ -354,3 +354,182 @@ th {
     grid-template-columns: 1fr;
   }
 }
+
+.panel-device-detail,
+.panel-configurator {
+  grid-column: span 6;
+}
+
+.panel-profiles,
+.panel-jobs {
+  grid-column: span 4;
+}
+
+.panel-operations {
+  grid-column: span 4;
+}
+
+.panel-subsection {
+  display: grid;
+  gap: 12px;
+}
+
+.panel-heading.compact {
+  margin-bottom: 0;
+}
+
+.detail-layout,
+.automation-form {
+  display: grid;
+  gap: 18px;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.detail-card,
+.interface-card,
+.interface-editor {
+  background: var(--panel-strong);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 14px 16px;
+}
+
+.detail-card {
+  display: grid;
+  gap: 10px;
+  min-height: 96px;
+}
+
+.detail-card strong {
+  font-size: 1.05rem;
+}
+
+.detail-columns {
+  display: grid;
+  grid-template-columns: 0.95fr 1.05fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.interface-list,
+.interface-editor-list {
+  display: grid;
+  gap: 12px;
+}
+
+.interface-card header,
+.interface-editor-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.interface-card p,
+.interface-editor p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.automation-form {
+  gap: 16px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.automation-form label,
+.interface-editor label {
+  display: grid;
+  gap: 8px;
+}
+
+.checkbox-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+}
+
+.checkbox-inline input {
+  width: auto;
+  margin: 0;
+}
+
+.button-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.button-row button {
+  min-width: 120px;
+}
+
+.code-block {
+  margin: 0;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: #1f2a2f;
+  color: #f7f5ef;
+  font-family: "Cascadia Code", "Consolas", monospace;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.code-block.placeholder {
+  color: #d8d4c7;
+}
+
+.running-config-state {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+
+.device-row {
+  cursor: pointer;
+  transition: background 0.18s ease;
+}
+
+.device-row:hover {
+  background: rgba(0, 109, 119, 0.06);
+}
+
+.device-row.selected {
+  background: rgba(131, 197, 190, 0.22);
+}
+
+.badge.warn {
+  background: rgba(255, 183, 3, 0.18);
+  color: #8a5a00;
+}
+
+@media (max-width: 1100px) {
+  .panel-device-detail,
+  .panel-configurator,
+  .panel-profiles,
+  .panel-jobs,
+  .panel-operations {
+    grid-column: auto;
+  }
+
+  .detail-grid,
+  .detail-columns,
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}

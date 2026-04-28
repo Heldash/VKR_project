@@ -1,5 +1,7 @@
 """Rendering helpers for configuration generation."""
 
+from ipaddress import ip_interface
+
 from app.automation.models import BaseConfigurationRequest, MockDeviceRuntimeState
 from app.domain.models import InterfaceSpec
 
@@ -38,7 +40,12 @@ class BaseConfigRenderer:
         if interface.description:
             lines.append(f" description {interface.description}")
         if interface.ipv4_address:
-            lines.append(f" ip address {interface.ipv4_address}")
+            lines.append(BaseConfigRenderer._render_ipv4_address(interface.ipv4_address))
         lines.append(" no shutdown" if interface.enabled else " shutdown")
         lines.append(" exit")
         return lines
+
+    @staticmethod
+    def _render_ipv4_address(value: str) -> str:
+        iface = ip_interface(value)
+        return f" ip address {iface.ip} {iface.network.netmask}"

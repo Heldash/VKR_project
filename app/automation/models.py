@@ -498,6 +498,8 @@ class RunningConfigResponse(BaseModel):
 
     device_name: str
     lines: list[str]
+    cached: bool = False
+    collection_error: str | None = None
 
 
 class AutomationJobRequest(BaseModel):

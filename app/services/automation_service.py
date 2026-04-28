@@ -31,6 +31,7 @@ from app.automation.models import (
     OperationSummary,
     ResolvedDeviceTarget,
     RollbackExecutionResult,
+    RunningConfigResponse,
     SelectionBaseConfigurationRequest,
     SelectionProfileConfigurationRequest,
 )
@@ -67,6 +68,7 @@ class AutomationService:
         self._journal_repository = journal_repository or OperationJournalRepository()
         self._profile_repository = profile_repository or ConfigurationProfileRepository()
         self._reachability_service = reachability_service or ReachabilityService()
+        self._running_config_cache: dict[str, list[str]] = {}
         self._nornir = build_nornir(self._repository.list_devices())
 
     def list_profiles(self) -> list[BaseConfigurationProfile]:
@@ -378,9 +380,10 @@ class AutomationService:
         dry_run: bool = False,
     ) -> BaseConfigurationExecutionResult:
         self._repository.get_device(device_name)
+        runtime_nornir = self._build_runtime_nornir(device_name)
         try:
             result = self._execution_backend.deploy_base_configuration(
-                nornir=self._nornir,
+                nornir=runtime_nornir,
                 device_name=device_name,
                 request=request,
                 renderer=self._renderer,
@@ -418,6 +421,8 @@ class AutomationService:
                 snapshot_id=result.snapshot_id,
             )
         )
+        self._reachability_service.mark_reachable(device_name)
+        self._running_config_cache[device_name] = list(result.after)
         return result
 
     def deploy_base_configuration_from_profile(
@@ -534,14 +539,33 @@ class AutomationService:
             dry_run=dry_run,
         )
 
-    def get_running_config(self, device_name: str) -> list[str]:
+    def get_running_config_response(self, device_name: str) -> RunningConfigResponse:
         self._repository.get_device(device_name)
-        return self._execution_backend.get_running_config(
-            nornir=self._nornir,
-            device_name=device_name,
-            renderer=self._renderer,
-            state_repository=self._state_repository,
-        )
+        runtime_nornir = self._build_runtime_nornir(device_name)
+        try:
+            lines = self._execution_backend.get_running_config(
+                nornir=runtime_nornir,
+                device_name=device_name,
+                renderer=self._renderer,
+                state_repository=self._state_repository,
+            )
+        except AutomationExecutionError as exc:
+            cached_lines = self._running_config_cache.get(device_name)
+            if cached_lines is not None:
+                return RunningConfigResponse(
+                    device_name=device_name,
+                    lines=list(cached_lines),
+                    cached=True,
+                    collection_error=str(exc),
+                )
+            raise
+
+        self._reachability_service.mark_reachable(device_name)
+        self._running_config_cache[device_name] = list(lines)
+        return RunningConfigResponse(device_name=device_name, lines=list(lines))
+
+    def get_running_config(self, device_name: str) -> list[str]:
+        return self.get_running_config_response(device_name).lines
 
     def list_snapshots(self, device_name: str) -> list[DeviceSnapshotSummary]:
         self._repository.get_device(device_name)
@@ -653,6 +677,14 @@ class AutomationService:
             raise AutomationExecutionError(
                 "Compliance checks are supported only for the mock execution backend in the MVP"
             )
+
+    def _build_runtime_nornir(self, device_name: str):
+        self._nornir = build_nornir(self._repository.list_devices())
+        if device_name not in self._nornir.inventory.hosts:
+            raise AutomationExecutionError(
+                f"Device '{device_name}' is not present in the active Nornir inventory"
+            )
+        return self._nornir
 
     def _select_devices(self, selector: DeviceSelector) -> list[MockRouter]:
         devices = self._reachability_service.annotate_devices(self._repository.list_devices())

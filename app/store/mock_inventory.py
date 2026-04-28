@@ -11,18 +11,15 @@ MOCK_ROUTERS: tuple[MockRouter, ...] = (
         platform="cisco_ios",
         vendor="Cisco",
         role="edge",
-        site="msk-lab",
-        management_ip="192.0.2.11",
+        site="msk-core",
+        management_ip="172.16.159.11",
+        username="admin",
+        password="admin",
         interfaces=[
             InterfaceSpec(
                 name="GigabitEthernet0/0",
-                description="Uplink to ISP",
-                ipv4_address="198.51.100.1/30",
-            ),
-            InterfaceSpec(
-                name="GigabitEthernet0/1",
-                description="LAN segment A",
-                ipv4_address="10.10.10.1/24",
+                description="Transit to R2",
+                ipv4_address="10.0.12.1/30",
             ),
         ],
     ),
@@ -32,18 +29,25 @@ MOCK_ROUTERS: tuple[MockRouter, ...] = (
         platform="cisco_ios",
         vendor="Cisco",
         role="distribution",
-        site="msk-lab",
-        management_ip="192.0.2.12",
+        site="msk-core",
+        management_ip="172.16.159.12",
+        username="admin",
+        password="admin",
         interfaces=[
             InterfaceSpec(
                 name="GigabitEthernet0/0",
-                description="Transit to core",
-                ipv4_address="172.16.0.2/30",
+                description="Transit to R1",
+                ipv4_address="10.0.12.2/30",
             ),
             InterfaceSpec(
-                name="GigabitEthernet0/1",
-                description="Users VLAN gateway",
-                ipv4_address="10.20.0.1/24",
+                name="GigabitEthernet1/0",
+                description="Transit to R3",
+                ipv4_address="10.0.23.1/30",
+            ),
+            InterfaceSpec(
+                name="GigabitEthernet2/0",
+                description="Transit to R4",
+                ipv4_address="10.0.24.1/30",
             ),
         ],
     ),
@@ -52,24 +56,40 @@ MOCK_ROUTERS: tuple[MockRouter, ...] = (
         hostname="R3",
         platform="cisco_ios",
         vendor="Cisco",
-        role="core",
-        site="spb-lab",
-        management_ip="192.0.2.13",
-        status="maintenance",
+        role="edge",
+        site="msk-branch-a",
+        management_ip="172.16.159.13",
+        username="admin",
+        password="admin",
         interfaces=[
             InterfaceSpec(
-                name="GigabitEthernet1/0",
-                description="Core ring west",
-                ipv4_address="172.16.10.1/30",
+                name="GigabitEthernet0/0",
+                description="Transit to R2",
+                ipv4_address="10.0.23.2/30",
             ),
+        ],
+    ),
+    MockRouter(
+        name="lab-r4",
+        hostname="R4",
+        platform="cisco_ios",
+        vendor="Cisco",
+        role="edge",
+        site="msk-branch-b",
+        management_ip="172.16.159.17",
+        username="admin",
+        password="admin",
+        interfaces=[
             InterfaceSpec(
-                name="GigabitEthernet1/1",
-                description="Core ring east",
-                ipv4_address="172.16.10.5/30",
+                name="GigabitEthernet0/0",
+                description="Transit to R2",
+                ipv4_address="10.0.24.2/30",
             ),
         ],
     ),
 )
+
+
 
 
 class MockInventoryRepository:

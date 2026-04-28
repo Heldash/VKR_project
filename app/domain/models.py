@@ -45,5 +45,5 @@ class MockRouter(BaseModel):
     username: str = Field(default="lab", repr=False)
     password: str = Field(default="lab", repr=False)
     secret: str | None = Field(default=None, repr=False)
-    status: Literal["reachable", "maintenance"] = "reachable"
+    status: Literal["reachable", "maintenance", "unreachable"] = "reachable"
     interfaces: list[InterfaceSpec]

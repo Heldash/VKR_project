@@ -58,7 +58,7 @@ router = APIRouter()
 OperationType = Literal["preview", "apply", "rollback", "compliance"]
 OperationStatus = Literal["success", "failed"]
 DeviceRole = Literal["edge", "distribution", "core"]
-DeviceReachability = Literal["reachable", "maintenance"]
+DeviceReachability = Literal["reachable", "maintenance", "unreachable"]
 
 
 def raise_not_found(exc: DeviceNotFoundError) -> None:

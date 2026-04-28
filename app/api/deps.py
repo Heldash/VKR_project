@@ -18,6 +18,7 @@ from app.services.device_service import DeviceService
 from app.services.diagnostics_service import DiagnosticsService
 from app.services.job_service import JobService
 from app.services.preflight_service import PreflightService
+from app.services.reachability_service import ReachabilityService
 from app.store.config_profiles import ConfigurationProfileRepository
 from app.store.contracts import DeviceRepository
 from app.store.factory import build_device_repository
@@ -65,7 +66,10 @@ def get_job_service() -> JobService:
 
 @lru_cache
 def get_device_service() -> DeviceService:
-    return DeviceService(repository=get_device_repository())
+    return DeviceService(
+        repository=get_device_repository(),
+        reachability_service=get_reachability_service(),
+    )
 
 
 @lru_cache
@@ -74,13 +78,18 @@ def get_execution_backend() -> ConfigExecutionBackend:
 
 
 @lru_cache
+def get_reachability_service() -> ReachabilityService:
+    return ReachabilityService()
+
+
+@lru_cache
 def get_preflight_service() -> PreflightService:
-    return PreflightService()
+    return PreflightService(reachability_service=get_reachability_service())
 
 
 @lru_cache
 def get_diagnostics_service() -> DiagnosticsService:
-    return DiagnosticsService()
+    return DiagnosticsService(reachability_service=get_reachability_service())
 
 
 @lru_cache
@@ -91,6 +100,7 @@ def get_automation_service() -> AutomationService:
         execution_backend=get_execution_backend(),
         journal_repository=get_operation_journal_repository(),
         profile_repository=get_configuration_profile_repository(),
+        reachability_service=get_reachability_service(),
     )
 
 

@@ -44,6 +44,7 @@ from app.store.config_profiles import ConfigurationProfileRepository
 from app.store.contracts import DeviceRepository
 from app.store.mock_device_state import MockDeviceStateRepository
 from app.store.operation_journal import OperationJournalRepository
+from app.services.reachability_service import ReachabilityService
 
 
 class AutomationService:
@@ -57,6 +58,7 @@ class AutomationService:
         execution_backend: ConfigExecutionBackend | None = None,
         journal_repository: OperationJournalRepository | None = None,
         profile_repository: ConfigurationProfileRepository | None = None,
+        reachability_service: ReachabilityService | None = None,
     ) -> None:
         self._repository = repository
         self._state_repository = state_repository
@@ -64,6 +66,7 @@ class AutomationService:
         self._execution_backend = execution_backend or MockExecutionBackend()
         self._journal_repository = journal_repository or OperationJournalRepository()
         self._profile_repository = profile_repository or ConfigurationProfileRepository()
+        self._reachability_service = reachability_service or ReachabilityService()
         self._nornir = build_nornir(self._repository.list_devices())
 
     def list_profiles(self) -> list[BaseConfigurationProfile]:
@@ -652,7 +655,7 @@ class AutomationService:
             )
 
     def _select_devices(self, selector: DeviceSelector) -> list[MockRouter]:
-        devices = self._repository.list_devices()
+        devices = self._reachability_service.annotate_devices(self._repository.list_devices())
         if selector.site is not None:
             devices = [device for device in devices if device.site == selector.site]
         if selector.role is not None:

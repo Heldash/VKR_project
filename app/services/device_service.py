@@ -2,14 +2,20 @@
 
 from app.automation.models import DeviceSelectionResponse, DeviceSelector, ResolvedDeviceTarget
 from app.domain.models import MockRouter
+from app.services.reachability_service import ReachabilityService
 from app.store.contracts import DeviceRepository
 
 
 class DeviceService:
     """Provides a stable interface for device-related operations."""
 
-    def __init__(self, repository: DeviceRepository) -> None:
+    def __init__(
+        self,
+        repository: DeviceRepository,
+        reachability_service: ReachabilityService | None = None,
+    ) -> None:
         self._repository = repository
+        self._reachability_service = reachability_service or ReachabilityService()
 
     def list_devices(
         self,
@@ -18,7 +24,7 @@ class DeviceService:
         status: str | None = None,
         vendor: str | None = None,
     ) -> list[MockRouter]:
-        devices = self._repository.list_devices()
+        devices = self._reachability_service.annotate_devices(self._repository.list_devices())
         if site is not None:
             devices = [device for device in devices if device.site == site]
         if role is not None:
@@ -30,7 +36,7 @@ class DeviceService:
         return devices
 
     def get_device(self, device_name: str) -> MockRouter:
-        return self._repository.get_device(device_name)
+        return self._reachability_service.annotate_device(self._repository.get_device(device_name))
 
     def resolve_devices(self, selector: DeviceSelector) -> DeviceSelectionResponse:
         devices = self.list_devices(

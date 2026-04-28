@@ -250,7 +250,7 @@ class DeviceSelector(BaseModel):
 
     site: str | None = None
     role: Literal["edge", "distribution", "core"] | None = None
-    status: Literal["reachable", "maintenance"] | None = None
+    status: Literal["reachable", "maintenance", "unreachable"] | None = None
     vendor: str | None = None
 
     @field_validator("site", "vendor")
@@ -265,7 +265,7 @@ class ResolvedDeviceTarget(BaseModel):
     name: str
     site: str
     role: Literal["edge", "distribution", "core"]
-    status: Literal["reachable", "maintenance"]
+    status: Literal["reachable", "maintenance", "unreachable"]
     vendor: str
     management_ip: str
 
@@ -309,6 +309,7 @@ class PreflightReport(BaseModel):
     matched_devices: int
     reachable_devices: int
     maintenance_devices: int
+    unreachable_devices: int
     checks: list[PreflightCheck] = Field(default_factory=list)
 
 
@@ -330,6 +331,7 @@ class DiagnosticsReport(BaseModel):
     matched_devices: int
     reachable_devices: int
     maintenance_devices: int
+    unreachable_devices: int
     checks: list[DiagnosticsCheck] = Field(default_factory=list)
 
 

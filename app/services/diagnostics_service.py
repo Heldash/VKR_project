@@ -8,6 +8,7 @@ import httpx
 from app.automation.models import DiagnosticsCheck, DiagnosticsReport, DeviceSelector
 from app.core.config import settings
 from app.domain.models import MockRouter
+from app.services.reachability_service import ReachabilityService
 from app.store.factory import build_device_repository
 from app.store.netbox_inventory import NetBoxInventoryRepository
 
@@ -24,10 +25,14 @@ class DiagnosticsService:
         device_loader: DeviceLoader | None = None,
         netbox_probe: NetBoxProbe | None = None,
         socket_connector: SocketConnector | None = None,
+        reachability_service: ReachabilityService | None = None,
     ) -> None:
         self._device_loader = device_loader or self._load_devices
         self._netbox_probe = netbox_probe or self._probe_netbox_api
         self._socket_connector = socket_connector or create_connection
+        self._reachability_service = reachability_service or ReachabilityService(
+            socket_connector=self._socket_connector
+        )
 
     def build_report(self, selector: DeviceSelector | None = None) -> DiagnosticsReport:
         effective_selector = selector or DeviceSelector()
@@ -36,7 +41,7 @@ class DiagnosticsService:
         matched_devices: list[MockRouter] = []
 
         try:
-            devices = self._device_loader()
+            devices = self._reachability_service.annotate_devices(self._device_loader())
             checks.append(
                 DiagnosticsCheck(
                     name="inventory_load",
@@ -103,7 +108,14 @@ class DiagnosticsService:
 
         reachable_devices = [device for device in matched_devices if device.status == "reachable"]
         maintenance_devices = [device for device in matched_devices if device.status == "maintenance"]
-        checks.append(self._build_execution_probe_check(reachable_devices, maintenance_devices))
+        unreachable_devices = [device for device in matched_devices if device.status == "unreachable"]
+        checks.append(
+            self._build_execution_probe_check(
+                reachable_devices,
+                maintenance_devices,
+                unreachable_devices,
+            )
+        )
 
         ok = all(check.status == "success" for check in checks)
         return DiagnosticsReport(
@@ -113,6 +125,7 @@ class DiagnosticsService:
             matched_devices=len(matched_devices),
             reachable_devices=len(reachable_devices),
             maintenance_devices=len(maintenance_devices),
+            unreachable_devices=len(unreachable_devices),
             checks=checks,
         )
 
@@ -149,6 +162,7 @@ class DiagnosticsService:
         self,
         reachable_devices: list[MockRouter],
         maintenance_devices: list[MockRouter],
+        unreachable_devices: list[MockRouter],
     ) -> DiagnosticsCheck:
         if settings.execution_backend == "mock":
             return DiagnosticsCheck(
@@ -159,6 +173,7 @@ class DiagnosticsService:
                     "backend": "mock",
                     "reachable_devices": len(reachable_devices),
                     "maintenance_devices": len(maintenance_devices),
+                    "unreachable_devices": len(unreachable_devices),
                 },
             )
 
@@ -184,6 +199,7 @@ class DiagnosticsService:
                     "backend": "netmiko",
                     "reachable_devices": 0,
                     "maintenance_devices": len(maintenance_devices),
+                    "unreachable_devices": len(unreachable_devices),
                 },
             )
 

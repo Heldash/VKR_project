@@ -4,11 +4,18 @@ from app.automation.factory import build_execution_backend
 from app.automation.models import DeviceSelector, PreflightCheck, PreflightReport
 from app.core.config import settings
 from app.domain.models import MockRouter
+from app.services.reachability_service import ReachabilityService
 from app.store.factory import build_device_repository
 
 
 class PreflightService:
     """Builds a readiness report for the current automation environment."""
+
+    def __init__(
+        self,
+        reachability_service: ReachabilityService | None = None,
+    ) -> None:
+        self._reachability_service = reachability_service or ReachabilityService()
 
     def build_report(self, selector: DeviceSelector | None = None) -> PreflightReport:
         effective_selector = selector or DeviceSelector()
@@ -18,7 +25,7 @@ class PreflightService:
 
         try:
             repository = build_device_repository()
-            devices = repository.list_devices()
+            devices = self._reachability_service.annotate_devices(repository.list_devices())
             checks.append(
                 PreflightCheck(
                     name="inventory_backend",
@@ -83,7 +90,14 @@ class PreflightService:
 
         reachable_devices = sum(1 for device in matched_devices if device.status == "reachable")
         maintenance_devices = sum(1 for device in matched_devices if device.status == "maintenance")
-        checks.extend(self._build_execution_checks(reachable_devices, maintenance_devices))
+        unreachable_devices = sum(1 for device in matched_devices if device.status == "unreachable")
+        checks.extend(
+            self._build_execution_checks(
+                reachable_devices,
+                maintenance_devices,
+                unreachable_devices,
+            )
+        )
 
         ready = all(check.status == "success" for check in checks)
         return PreflightReport(
@@ -93,6 +107,7 @@ class PreflightService:
             matched_devices=len(matched_devices),
             reachable_devices=reachable_devices,
             maintenance_devices=maintenance_devices,
+            unreachable_devices=unreachable_devices,
             checks=checks,
         )
 
@@ -100,6 +115,7 @@ class PreflightService:
         self,
         reachable_devices: int,
         maintenance_devices: int,
+        unreachable_devices: int,
     ) -> list[PreflightCheck]:
         checks: list[PreflightCheck] = []
         build_execution_backend()
@@ -154,6 +170,7 @@ class PreflightService:
                     meta={
                         "reachable_devices": reachable_devices,
                         "maintenance_devices": maintenance_devices,
+                        "unreachable_devices": unreachable_devices,
                     },
                 )
             )
@@ -166,6 +183,7 @@ class PreflightService:
                     meta={
                         "reachable_devices": reachable_devices,
                         "maintenance_devices": maintenance_devices,
+                        "unreachable_devices": unreachable_devices,
                     },
                 )
             )

@@ -62,8 +62,11 @@ function setStatus(text, isError = false) {
 function renderDevices(devices) {
   const table = document.getElementById("devices-table");
   const reachable = devices.filter((device) => device.status === "reachable").length;
+  const maintenance = devices.filter((device) => device.status === "maintenance").length;
+  const unreachable = devices.filter((device) => device.status === "unreachable").length;
   document.getElementById("devices-value").textContent = String(devices.length);
-  document.getElementById("devices-meta").textContent = `${reachable} reachable / ${devices.length - reachable} maintenance`;
+  document.getElementById("devices-meta").textContent =
+    `${reachable} reachable / ${unreachable} unreachable / ${maintenance} maintenance`;
   document.getElementById("devices-caption").textContent = `Загружено устройств: ${devices.length}`;
 
   if (!devices.length) {

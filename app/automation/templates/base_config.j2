@@ -1,0 +1,23 @@
+hostname {{ hostname }}
+ip domain-name {{ domain_name }}
+{% if banner_motd %}
+banner motd ^{{ banner_motd }}^
+{% endif %}
+{% if ntp_server %}
+ntp server {{ ntp_server }}
+{% endif %}
+{% for interface in interfaces %}
+interface {{ interface.name }}
+{% if interface.description %}
+ description {{ interface.description }}
+{% endif %}
+{% if interface.ipv4_address %}
+ {{ interface.ipv4_address }}
+{% endif %}
+{% if interface.enabled %}
+ no shutdown
+{% else %}
+ shutdown
+{% endif %}
+ exit
+{% endfor %}

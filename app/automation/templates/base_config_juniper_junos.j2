@@ -1,0 +1,21 @@
+set system host-name {{ hostname }}
+set system domain-name {{ domain_name }}
+{% if banner_motd %}
+set system login message "{{ banner_motd }}"
+{% endif %}
+{% if ntp_server %}
+set system ntp server {{ ntp_server }}
+{% endif %}
+{% for interface in interfaces %}
+{% if interface.description %}
+set interfaces {{ interface.name }} description "{{ interface.description }}"
+{% endif %}
+{% if interface.ipv4_address %}
+set interfaces {{ interface.name }} unit 0 family inet address {{ interface.ipv4_address }}
+{% endif %}
+{% if interface.enabled %}
+delete interfaces {{ interface.name }} disable
+{% else %}
+set interfaces {{ interface.name }} disable
+{% endif %}
+{% endfor %}

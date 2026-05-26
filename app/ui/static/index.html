@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -11,10 +11,10 @@
       <header class="hero">
         <div class="hero-copy">
           <p class="eyebrow">NetAuto</p>
-          <h1>Панель управления сетевыми устройствами</h1>
+          <h1>Network automation control panel</h1>
           <p class="hero-text">
-            Интерфейс помогает быстро проверить состояние сервиса, устройств,
-            очереди задач и истории операций автоматизации.
+            The interface provides device inspection, compliance checks, single-device automation,
+            batch scenarios, selector-based operations, async jobs, and mock snapshots/rollback.
           </p>
         </div>
         <div class="hero-actions">
@@ -26,66 +26,66 @@
       <main class="dashboard-grid">
         <section class="panel panel-connection">
           <div class="panel-heading">
-            <h2>Подключение к API</h2>
-            <button id="refresh-all" type="button">Обновить данные</button>
+            <h2>API connection</h2>
+            <button id="refresh-all" type="button">Refresh data</button>
           </div>
           <form id="connection-form" class="connection-form">
             <label>
-              <span>Базовый путь API</span>
+              <span>API base path</span>
               <input id="base-url" name="baseUrl" type="text" value="/api" />
             </label>
             <label>
               <span>X-API-Key</span>
-              <input id="api-key" name="apiKey" type="password" placeholder="Необязательно" />
+              <input id="api-key" name="apiKey" type="password" placeholder="Optional" />
             </label>
             <label>
-              <span>RBAC логин</span>
+              <span>RBAC username</span>
               <input id="username" name="username" type="text" placeholder="operator" />
             </label>
             <label>
-              <span>RBAC пароль</span>
+              <span>RBAC password</span>
               <input id="password" name="password" type="password" placeholder="operator" />
             </label>
           </form>
           <p id="connection-status" class="status-line muted">
-            Настройки подключаются локально в браузере и не отправляются, пока не нажата кнопка обновления.
+            Connection parameters are stored only in the browser and are sent when you run an action.
           </p>
         </section>
 
         <section class="panel panel-overview">
           <div class="panel-heading">
-            <h2>Общий статус</h2>
+            <h2>Overview</h2>
           </div>
           <div class="stats-grid">
             <article class="stat-card">
               <span class="label">API</span>
               <strong id="health-value">-</strong>
-              <small id="health-meta">ожидание запроса</small>
+              <small id="health-meta">waiting for refresh</small>
             </article>
             <article class="stat-card">
-              <span class="label">БД</span>
+              <span class="label">Database</span>
               <strong id="database-value">-</strong>
               <small id="database-meta">roles/users</small>
             </article>
             <article class="stat-card">
-              <span class="label">Устройства</span>
+              <span class="label">Devices</span>
               <strong id="devices-value">-</strong>
-              <small id="devices-meta">reachable / maintenance</small>
+              <small id="devices-meta">reachable / unreachable / maintenance</small>
             </article>
             <article class="stat-card">
-              <span class="label">Профили</span>
+              <span class="label">Profiles</span>
               <strong id="profiles-value">-</strong>
-              <small id="profiles-meta">готовые шаблоны</small>
+              <small id="profiles-meta">baseline templates</small>
             </article>
             <article class="stat-card">
-              <span class="label">Задачи</span>
+              <span class="label">Jobs</span>
               <strong id="jobs-value">-</strong>
-              <small id="jobs-meta">очередь автоматизации</small>
+              <small id="jobs-meta">queued automation tasks</small>
             </article>
             <article class="stat-card">
-              <span class="label">Операции</span>
+              <span class="label">Operations</span>
               <strong id="operations-value">-</strong>
-              <small id="operations-meta">успешные / ошибочные</small>
+              <small id="operations-meta">successful / failed</small>
             </article>
           </div>
         </section>
@@ -93,24 +93,25 @@
         <section class="panel panel-devices">
           <div class="panel-heading">
             <div>
-              <h2>Устройства</h2>
-              <span id="devices-caption" class="caption">Инвентарь устройств</span>
+              <h2>Devices</h2>
+              <span id="devices-caption" class="caption">Inventory devices</span>
             </div>
-            <span class="caption">Нажми на строку, чтобы открыть карточку</span>
+            <span id="device-selection-caption" class="caption">Click row to inspect, use checkboxes for batch mode</span>
           </div>
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>Устройство</th>
-                  <th>Площадка</th>
-                  <th>Роль</th>
-                  <th>Статус</th>
+                  <th>Select</th>
+                  <th>Device</th>
+                  <th>Site</th>
+                  <th>Role</th>
+                  <th>Status</th>
                   <th>Mgmt IP</th>
                 </tr>
               </thead>
               <tbody id="devices-table">
-                <tr><td colspan="5" class="placeholder">Данные ещё не загружены</td></tr>
+                <tr><td colspan="6" class="placeholder">Devices will appear after refresh.</td></tr>
               </tbody>
             </table>
           </div>
@@ -119,23 +120,23 @@
         <section class="panel panel-device-detail">
           <div class="panel-heading">
             <div>
-              <h2>Состояние устройства</h2>
-              <span id="device-caption" class="caption">Выбери устройство из списка</span>
+              <h2>Device state</h2>
+              <span id="device-caption" class="caption">Select a device from the table</span>
             </div>
             <span id="device-status-badge" class="badge">-</span>
           </div>
           <div id="device-detail" class="detail-layout">
-            <p class="placeholder">Данные устройства появятся после выбора в таблице.</p>
+            <p class="placeholder">Device details will appear after selection.</p>
           </div>
         </section>
 
         <section class="panel panel-configurator">
           <div class="panel-heading">
             <div>
-              <h2>Автоматическая настройка</h2>
-              <span id="config-device-name" class="caption">Устройство не выбрано</span>
+              <h2>Single-device automation</h2>
+              <span id="config-device-name" class="caption">No device selected</span>
             </div>
-            <button id="reset-config" type="button">Сбросить форму</button>
+            <button id="reset-config" type="button">Reset form</button>
           </div>
           <form id="device-config-form" class="automation-form">
             <div class="form-grid">
@@ -153,20 +154,20 @@
               </label>
               <label>
                 <span>NTP server</span>
-                <input id="config-ntp" type="text" name="ntp_server" placeholder="Необязательно" />
+                <input id="config-ntp" type="text" name="ntp_server" placeholder="Optional" />
               </label>
             </div>
 
             <div class="panel-subsection">
               <div class="panel-heading compact">
-                <h3>Интерфейсы</h3>
-                <span class="caption">Настраиваются интерфейсы выбранного устройства</span>
+                <h3>Interfaces</h3>
+                <span class="caption">Edit existing interfaces or add extra ports to the request payload</span>
               </div>
               <div class="subsection-actions">
                 <button id="add-interface" type="button" class="secondary-action">+ Add port</button>
               </div>
               <div id="config-interfaces" class="interface-editor-list">
-                <p class="placeholder">Сначала выбери устройство.</p>
+                <p class="placeholder">Select a device first.</p>
               </div>
             </div>
 
@@ -174,42 +175,159 @@
               <button id="preview-config" type="button">Preview</button>
               <button id="dry-run-config" type="button">Dry run</button>
               <button id="apply-config" type="button">Apply</button>
+              <button id="check-compliance" type="button">Compliance</button>
             </div>
           </form>
 
           <div class="panel-subsection">
             <div class="panel-heading compact">
-              <h3>Результат операции</h3>
-              <span id="automation-result-caption" class="caption">Пока ничего не запускалось</span>
+              <h3>Operation result</h3>
+              <span id="automation-result-caption" class="caption">No action has been started yet</span>
             </div>
-            <pre id="automation-result" class="code-block placeholder">Выбери устройство и запусти preview, dry-run или apply.</pre>
+            <pre id="automation-result" class="code-block placeholder">Run preview, dry-run, apply or compliance for the selected device.</pre>
+          </div>
+        </section>
+
+        <section class="panel panel-batch">
+          <div class="panel-heading">
+            <div>
+              <h2>Batch operations</h2>
+              <span id="batch-selection-caption" class="caption">No devices selected</span>
+            </div>
+          </div>
+          <div class="button-row">
+            <button id="batch-preview" type="button">Batch preview</button>
+            <button id="batch-dry-run" type="button">Batch dry run</button>
+            <button id="batch-apply" type="button">Batch apply</button>
+            <button id="batch-compliance" type="button">Batch compliance</button>
+          </div>
+          <pre id="batch-result" class="code-block placeholder">Select multiple devices in the table to run batch operations.</pre>
+        </section>
+
+        <section class="panel panel-selector">
+          <div class="panel-heading">
+            <div>
+              <h2>Selector automation</h2>
+              <span class="caption">Resolve inventory groups by filters and execute automation</span>
+            </div>
+          </div>
+          <form id="selector-form" class="automation-form">
+            <div class="form-grid">
+              <label>
+                <span>Site</span>
+                <input id="selector-site" type="text" placeholder="msk-core" />
+              </label>
+              <label>
+                <span>Role</span>
+                <select id="selector-role">
+                  <option value="">Any</option>
+                  <option value="edge">edge</option>
+                  <option value="distribution">distribution</option>
+                  <option value="core">core</option>
+                </select>
+              </label>
+              <label>
+                <span>Status</span>
+                <select id="selector-status">
+                  <option value="">Any</option>
+                  <option value="reachable">reachable</option>
+                  <option value="maintenance">maintenance</option>
+                  <option value="unreachable">unreachable</option>
+                </select>
+              </label>
+              <label>
+                <span>Vendor</span>
+                <input id="selector-vendor" type="text" placeholder="Cisco" />
+              </label>
+            </div>
+            <div class="button-row">
+              <button id="selector-resolve" type="button">Resolve</button>
+              <button id="selector-preview" type="button">Selector preview</button>
+              <button id="selector-dry-run" type="button">Selector dry run</button>
+              <button id="selector-apply" type="button">Selector apply</button>
+              <button id="selector-compliance" type="button">Selector compliance</button>
+            </div>
+          </form>
+          <div class="panel-subsection">
+            <div class="panel-heading compact">
+              <h3>Resolved devices</h3>
+              <span id="selector-summary" class="caption">No selector run yet</span>
+            </div>
+            <div id="selector-results" class="stack-list">
+              <p class="placeholder">Use filters to resolve a group of devices.</p>
+            </div>
+            <pre id="selector-result" class="code-block placeholder">Selector responses will appear here.</pre>
           </div>
         </section>
 
         <section class="panel panel-profiles">
           <div class="panel-heading">
-            <h2>Профили конфигурации</h2>
+            <h2>Configuration profiles</h2>
           </div>
           <div id="profiles-list" class="stack-list">
-            <p class="placeholder">Данные ещё не загружены</p>
+            <p class="placeholder">Profiles will appear after refresh.</p>
           </div>
         </section>
 
         <section class="panel panel-jobs">
           <div class="panel-heading">
-            <h2>Очередь задач</h2>
+            <div>
+              <h2>Async jobs</h2>
+              <span class="caption">Use queue backend directly: database or Celery/Redis</span>
+            </div>
+          </div>
+          <div class="panel-subsection">
+            <div class="form-grid compact-grid">
+              <label>
+                <span>Job operation</span>
+                <select id="job-operation">
+                  <option value="apply">apply</option>
+                  <option value="compliance">compliance</option>
+                </select>
+              </label>
+              <label>
+                <span>Job mode</span>
+                <label class="checkbox-inline">
+                  <input id="job-dry-run" type="checkbox" />
+                  <span>dry run</span>
+                </label>
+              </label>
+            </div>
+            <div class="button-row">
+              <button id="create-job" type="button">Create job</button>
+              <button id="execute-job" type="button">Execute selected job</button>
+              <button id="retry-job" type="button">Retry selected job</button>
+            </div>
+            <pre id="jobs-result" class="code-block placeholder">Create a job for the selected device and manage it here.</pre>
           </div>
           <div id="jobs-list" class="stack-list">
-            <p class="placeholder">Данные ещё не загружены</p>
+            <p class="placeholder">Jobs will appear after refresh.</p>
           </div>
+        </section>
+
+        <section class="panel panel-snapshots">
+          <div class="panel-heading">
+            <div>
+              <h2>Snapshots and rollback</h2>
+              <span id="snapshots-caption" class="caption">Available in mock backend</span>
+            </div>
+            <button id="refresh-snapshots" type="button">Refresh snapshots</button>
+          </div>
+          <div class="button-row">
+            <button id="rollback-snapshot" type="button">Rollback selected snapshot</button>
+          </div>
+          <div id="snapshots-list" class="stack-list">
+            <p class="placeholder">Select a device and load snapshots.</p>
+          </div>
+          <pre id="snapshots-result" class="code-block placeholder">Snapshot metadata and rollback output will appear here.</pre>
         </section>
 
         <section class="panel panel-operations">
           <div class="panel-heading">
-            <h2>История операций</h2>
+            <h2>Operation history</h2>
           </div>
           <div id="operations-list" class="stack-list">
-            <p class="placeholder">Данные ещё не загружены</p>
+            <p class="placeholder">Operations will appear after refresh.</p>
           </div>
         </section>
       </main>

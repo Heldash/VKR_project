@@ -2,6 +2,7 @@ from nornir.core.task import Result, Task
 
 from app.automation.execution_backends import NetmikoExecutionBackend
 from app.automation.models import BaseConfigurationRequest
+from app.domain.models import InterfaceSpec, MockRouter
 from app.services.automation_service import AutomationService
 from app.store.mock_device_state import MockDeviceStateRepository
 from app.store.mock_inventory import MockInventoryRepository
@@ -10,9 +11,11 @@ from app.store.mock_inventory import MockInventoryRepository
 class ShowCommandRecorder:
     def __init__(self) -> None:
         self.calls = 0
+        self.commands: list[str] = []
 
     def __call__(self, task: Task, command_string: str, **kwargs) -> Result:
         self.calls += 1
+        self.commands.append(command_string)
         suffix = "after" if self.calls > 1 else "before"
         output = "\n".join(
             [
@@ -35,13 +38,27 @@ class SendConfigRecorder:
         return Result(host=task.host, result="\n".join(config_commands), changed=True)
 
 
-def build_service(show_recorder: ShowCommandRecorder, send_recorder: SendConfigRecorder) -> AutomationService:
-    repository = MockInventoryRepository()
+class StaticRepository:
+    def __init__(self, devices: list[MockRouter]) -> None:
+        self._devices = {device.name: device for device in devices}
+
+    def list_devices(self) -> list[MockRouter]:
+        return list(self._devices.values())
+
+    def get_device(self, device_name: str) -> MockRouter:
+        return self._devices[device_name]
+
+
+def build_service(
+    show_recorder: ShowCommandRecorder,
+    send_recorder: SendConfigRecorder,
+    repository: StaticRepository | MockInventoryRepository | None = None,
+) -> AutomationService:
+    repository = repository or MockInventoryRepository()
     state_repository = MockDeviceStateRepository(repository.list_devices())
     execution_backend = NetmikoExecutionBackend(
         send_config_task=send_recorder,
         show_command_task=show_recorder,
-        running_config_command="show running-config",
     )
     return AutomationService(
         repository=repository,
@@ -68,6 +85,7 @@ def test_netmiko_backend_apply_uses_send_config_and_collects_running_config():
     assert send_recorder.last_commands[0] == "hostname EDGE-R1"
     assert result.before[0] == "hostname lab-r1-before"
     assert result.after[0] == "hostname lab-r1-after"
+    assert show_recorder.commands == ["show running-config", "show running-config"]
 
 
 def test_netmiko_backend_dry_run_skips_send_config():
@@ -97,3 +115,34 @@ def test_netmiko_backend_running_config_uses_show_command_task():
     assert lines[0] == "hostname lab-r1-before"
     assert show_recorder.calls == 1
     assert send_recorder.calls == 0
+    assert show_recorder.commands == ["show running-config"]
+
+
+def test_netmiko_backend_uses_platform_specific_show_command_for_juniper():
+    show_recorder = ShowCommandRecorder()
+    send_recorder = SendConfigRecorder()
+    repository = StaticRepository(
+        [
+            MockRouter(
+                name="lab-j1",
+                hostname="lab-j1",
+                platform="juniper_junos",
+                vendor="Juniper",
+                role="edge",
+                site="lab",
+                management_ip="192.0.2.20",
+                interfaces=[
+                    InterfaceSpec(
+                        name="ge-0/0/0",
+                        description="Transit",
+                        ipv4_address="10.0.12.2/30",
+                    )
+                ],
+            )
+        ]
+    )
+    service = build_service(show_recorder, send_recorder, repository=repository)
+
+    service.get_running_config("lab-j1")
+
+    assert show_recorder.commands == ["show configuration | display set"]

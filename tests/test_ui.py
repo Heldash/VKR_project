@@ -28,6 +28,9 @@ async def test_ui_dashboard_page_is_served():
     assert "NetAuto" in response.text
     assert "Swagger UI" in response.text
     assert "add-interface" in response.text
+    assert "batch-preview" in response.text
+    assert "selector-resolve" in response.text
+    assert "rollback-snapshot" in response.text
 
 
 @pytest.mark.asyncio
@@ -38,3 +41,6 @@ async def test_ui_static_assets_are_served():
 
     assert response.status_code == 200
     assert "refreshDashboard" in response.text
+    assert "runBatchOperation" in response.text
+    assert "runSelectorOperation" in response.text
+    assert "rollbackSelectedSnapshot" in response.text

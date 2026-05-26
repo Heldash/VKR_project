@@ -82,10 +82,10 @@ class AutomationService:
         device_name: str,
         request: BaseConfigurationRequest,
     ) -> BaseConfigurationPreview:
-        self._repository.get_device(device_name)
+        device = self._repository.get_device(device_name)
         preview = BaseConfigurationPreview(
             device_name=device_name,
-            commands=self._renderer.render_commands(request),
+            commands=self._renderer.render_commands(request, platform=device.platform),
         )
         self._journal_repository.add(
             OperationRecord(
@@ -215,7 +215,7 @@ class AutomationService:
         device_name: str,
         request: BaseConfigurationRequest,
     ) -> BaseConfigurationComplianceReport:
-        self._repository.get_device(device_name)
+        device = self._repository.get_device(device_name)
         try:
             self._ensure_mock_compliance_supported()
             current_state = self._state_repository.get_state(device_name)
@@ -232,7 +232,7 @@ class AutomationService:
                     backend=self._execution_backend.backend_name,
                     status="failed",
                     request=request,
-                    commands=self._renderer.render_commands(request),
+                    commands=self._renderer.render_commands(request, platform=device.platform),
                     detail=str(exc),
                 )
             )
@@ -242,8 +242,8 @@ class AutomationService:
             device_name=device_name,
             compliant=False,
             drift=self._build_drift(current_state, expected_state),
-            current_lines=self._renderer.render_running_config(current_state),
-            expected_lines=self._renderer.render_running_config(expected_state),
+            current_lines=self._renderer.render_running_config(current_state, platform=device.platform),
+            expected_lines=self._renderer.render_running_config(expected_state, platform=device.platform),
             backend="mock",
         )
         report.compliant = len(report.drift) == 0
@@ -256,7 +256,7 @@ class AutomationService:
                 backend="mock",
                 status="success",
                 request=request,
-                commands=self._renderer.render_commands(request),
+                commands=self._renderer.render_commands(request, platform=device.platform),
                 changed=not report.compliant,
                 would_change=not report.compliant,
                 detail=(
@@ -379,7 +379,7 @@ class AutomationService:
         request: BaseConfigurationRequest,
         dry_run: bool = False,
     ) -> BaseConfigurationExecutionResult:
-        self._repository.get_device(device_name)
+        device = self._repository.get_device(device_name)
         runtime_nornir = self._build_runtime_nornir(device_name)
         try:
             result = self._execution_backend.deploy_base_configuration(
@@ -400,7 +400,7 @@ class AutomationService:
                     backend=self._execution_backend.backend_name,
                     status="failed",
                     request=request,
-                    commands=self._renderer.render_commands(request),
+                    commands=self._renderer.render_commands(request, platform=device.platform),
                     detail=str(exc),
                 )
             )
@@ -576,14 +576,14 @@ class AutomationService:
         device_name: str,
         snapshot_id: str,
     ) -> RollbackExecutionResult:
-        self._repository.get_device(device_name)
         if self._execution_backend.backend_name != "mock":
             raise AutomationExecutionError(
                 "Rollback is supported only for the mock execution backend in the MVP"
             )
 
+        device = self._repository.get_device(device_name)
         before_state = self._state_repository.get_state(device_name)
-        before = self._renderer.render_running_config(before_state)
+        before = self._renderer.render_running_config(before_state, platform=device.platform)
 
         try:
             restored_state = self._state_repository.restore_snapshot(device_name, snapshot_id)
@@ -600,7 +600,7 @@ class AutomationService:
             )
             raise
 
-        after = self._renderer.render_running_config(restored_state)
+        after = self._renderer.render_running_config(restored_state, platform=device.platform)
         result = RollbackExecutionResult(
             device_name=device_name,
             snapshot_id=snapshot_id,

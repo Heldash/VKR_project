@@ -29,15 +29,16 @@ def deploy_base_configuration_mock(
             f"Mock device '{task.host.name}' is in maintenance mode"
         )
 
-    commands = renderer.render_commands(request)
+    platform = str(task.host.platform or "cisco_ios")
+    commands = renderer.render_commands(request, platform=platform)
     before_state = state_repository.get_state(task.host.name)
-    before = renderer.render_running_config(before_state)
+    before = renderer.render_running_config(before_state, platform=platform)
 
     candidate_state = state_repository.preview_base_configuration(
         task.host.name,
         request,
     )
-    planned_after = renderer.render_running_config(candidate_state)
+    planned_after = renderer.render_running_config(candidate_state, platform=platform)
     would_change = before != planned_after
 
     if dry_run:
@@ -63,7 +64,7 @@ def deploy_base_configuration_mock(
         candidate_state,
         commands,
     )
-    after = renderer.render_running_config(committed_state)
+    after = renderer.render_running_config(committed_state, platform=platform)
     payload = BaseConfigurationExecutionResult(
         device_name=task.host.name,
         dry_run=False,
@@ -96,7 +97,7 @@ def deploy_base_configuration_netmiko(
             f"Mock device '{task.host.name}' is in maintenance mode"
         )
 
-    commands = renderer.render_commands(request)
+    commands = renderer.render_commands(request, platform=str(task.host.platform or "cisco_ios"))
     before = _collect_running_config(
         task,
         show_command_task,

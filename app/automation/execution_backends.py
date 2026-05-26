@@ -6,6 +6,7 @@ from nornir.core import Nornir
 from nornir_netmiko.tasks import netmiko_send_command, netmiko_send_config
 
 from app.automation.models import BaseConfigurationExecutionResult, BaseConfigurationRequest
+from app.automation.platform_profiles import get_platform_profile
 from app.automation.renderer import BaseConfigRenderer
 from app.automation.tasks import (
     collect_running_config_netmiko,
@@ -100,9 +101,7 @@ class NetmikoExecutionBackend:
     ) -> None:
         self._send_config_task = send_config_task
         self._show_command_task = show_command_task
-        self._running_config_command = (
-            running_config_command or settings.running_config_command
-        )
+        self._running_config_command_override = running_config_command
 
     def deploy_base_configuration(
         self,
@@ -113,6 +112,7 @@ class NetmikoExecutionBackend:
         state_repository: MockDeviceStateRepository,
         dry_run: bool = False,
     ) -> BaseConfigurationExecutionResult:
+        running_config_command = self._resolve_running_config_command(nornir, device_name)
         try:
             results = nornir.filter(name=device_name).run(
                 task=deploy_base_configuration_netmiko,
@@ -120,7 +120,7 @@ class NetmikoExecutionBackend:
                 renderer=renderer,
                 send_config_task=self._send_config_task,
                 show_command_task=self._show_command_task,
-                running_config_command=self._running_config_command,
+                running_config_command=running_config_command,
                 dry_run=dry_run,
             )
             task_result = _unwrap_result(results, device_name)
@@ -141,11 +141,12 @@ class NetmikoExecutionBackend:
         renderer: BaseConfigRenderer,
         state_repository: MockDeviceStateRepository,
     ) -> list[str]:
+        running_config_command = self._resolve_running_config_command(nornir, device_name)
         try:
             results = nornir.filter(name=device_name).run(
                 task=collect_running_config_netmiko,
                 show_command_task=self._show_command_task,
-                running_config_command=self._running_config_command,
+                running_config_command=running_config_command,
             )
             task_result = _unwrap_result(results, device_name)
         except Exception as exc:
@@ -153,6 +154,12 @@ class NetmikoExecutionBackend:
                 f"Failed to collect running configuration from '{device_name}': {exc}"
             ) from exc
         return list(task_result.result)
+
+    def _resolve_running_config_command(self, nornir: Nornir, device_name: str) -> str:
+        if self._running_config_command_override:
+            return self._running_config_command_override
+        platform = getattr(nornir.inventory.hosts.get(device_name), "platform", None)
+        return get_platform_profile(platform).running_config_command or settings.running_config_command
 
 
 def _unwrap_result(results, device_name: str):

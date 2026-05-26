@@ -181,6 +181,15 @@ input {
   font: inherit;
 }
 
+select {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.84);
+  padding: 12px 14px;
+  font: inherit;
+}
+
 .status-line {
   margin: 16px 0 0;
   font-size: 0.92rem;
@@ -290,6 +299,20 @@ th {
   line-height: 1.5;
 }
 
+.stack-item.selectable {
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+
+.stack-item.selectable:hover {
+  background: rgba(0, 109, 119, 0.06);
+}
+
+.stack-item.selectable.selected-item {
+  border-color: rgba(0, 109, 119, 0.34);
+  background: rgba(131, 197, 190, 0.16);
+}
+
 .stack-item ul {
   padding-left: 18px;
 }
@@ -360,12 +383,19 @@ th {
   grid-column: span 6;
 }
 
+.panel-batch,
+.panel-selector {
+  grid-column: span 6;
+}
+
 .panel-profiles,
 .panel-jobs {
   grid-column: span 4;
 }
 
-.panel-operations {
+.panel-operations,
+.panel-snapshots,
+.panel-compliance {
   grid-column: span 4;
 }
 
@@ -453,6 +483,10 @@ th {
   gap: 8px;
 }
 
+.compact-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .checkbox-inline {
   display: inline-flex;
   align-items: center;
@@ -498,6 +532,10 @@ th {
 
 .button-row button {
   min-width: 120px;
+}
+
+.table-wrap input[type="checkbox"] {
+  width: auto;
 }
 
 .code-block {
@@ -546,8 +584,12 @@ th {
 @media (max-width: 1100px) {
   .panel-device-detail,
   .panel-configurator,
+  .panel-batch,
+  .panel-selector,
   .panel-profiles,
   .panel-jobs,
+  .panel-snapshots,
+  .panel-compliance,
   .panel-operations {
     grid-column: auto;
   }

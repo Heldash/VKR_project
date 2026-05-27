@@ -102,7 +102,8 @@ def test_netmiko_backend_dry_run_skips_send_config():
     assert result.would_change is True
     assert send_recorder.calls == 0
     assert show_recorder.calls == 1
-    assert result.before == result.after
+    assert result.before != result.after
+    assert result.after[0] == "hostname DIST-R2"
 
 
 def test_netmiko_backend_running_config_uses_show_command_task():

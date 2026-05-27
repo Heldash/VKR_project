@@ -49,7 +49,7 @@ def deploy_base_configuration_mock(
             would_change=would_change,
             commands=commands,
             before=before,
-            after=before,
+            after=planned_after,
             backend="mock",
         )
         return Result(host=task.host, result=payload.model_dump(), changed=False)
@@ -105,6 +105,7 @@ def deploy_base_configuration_netmiko(
         show_command_kwargs,
     )
     would_change = bool(commands)
+    planned_after = list(commands)
 
     if dry_run:
         payload = BaseConfigurationExecutionResult(
@@ -114,7 +115,7 @@ def deploy_base_configuration_netmiko(
             would_change=would_change,
             commands=commands,
             before=before,
-            after=before,
+            after=planned_after,
             backend="netmiko",
         )
         return Result(host=task.host, result=payload.model_dump(), changed=False)

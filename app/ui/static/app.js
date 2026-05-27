@@ -331,6 +331,152 @@ function renderDatabase(database) {
   document.getElementById("database-meta").textContent = `${database.roles_count} ролей / ${database.users_count} пользователей`;
 }
 
+function parseInterfaceStateFromRunningConfig(device, runningConfigLines) {
+  const fallback = (device.interfaces || []).map((iface) => ({
+    name: iface.name,
+    description: iface.description || "",
+    ipv4_address: iface.ipv4_address || "",
+    enabled: iface.enabled ?? true,
+    source: "inventory",
+  }));
+
+  if (!Array.isArray(runningConfigLines) || !runningConfigLines.length) {
+    return fallback;
+  }
+
+  const platform = String(device.platform || "").toLowerCase();
+  if (platform.includes("juniper")) {
+    return parseJuniperInterfaces(runningConfigLines, fallback);
+  }
+  if (platform.includes("huawei")) {
+    return parseBlockInterfaces(runningConfigLines, fallback, "quit", "undo shutdown");
+  }
+  return parseBlockInterfaces(runningConfigLines, fallback, "exit", "no shutdown");
+}
+
+function cloneInterfaceMap(fallback) {
+  const map = new Map();
+  fallback.forEach((iface) => {
+    map.set(iface.name, { ...iface });
+  });
+  return map;
+}
+
+function finalizeInterfaceList(interfaceMap, fallback) {
+  const fallbackNames = fallback.map((iface) => iface.name);
+  const known = fallbackNames
+    .map((name) => interfaceMap.get(name))
+    .filter(Boolean);
+  const dynamic = Array.from(interfaceMap.values()).filter((iface) => !fallbackNames.includes(iface.name));
+  return [...known, ...dynamic];
+}
+
+function parseBlockInterfaces(runningConfigLines, fallback, sectionTerminator, enabledLine) {
+  const interfaceMap = cloneInterfaceMap(fallback);
+  let current = null;
+
+  const ensureInterface = (name) => {
+    if (!interfaceMap.has(name)) {
+      interfaceMap.set(name, {
+        name,
+        description: "",
+        ipv4_address: "",
+        enabled: true,
+        source: "live",
+      });
+    }
+    return interfaceMap.get(name);
+  };
+
+  runningConfigLines.forEach((rawLine) => {
+    const line = String(rawLine || "");
+    const trimmed = line.trim();
+    if (!trimmed) {
+      return;
+    }
+    if (trimmed.startsWith("interface ")) {
+      const name = trimmed.slice("interface ".length).trim();
+      current = ensureInterface(name);
+      current.source = "live";
+      return;
+    }
+    if (trimmed === sectionTerminator) {
+      current = null;
+      return;
+    }
+    if (!current) {
+      return;
+    }
+    if (trimmed.startsWith("description ")) {
+      current.description = trimmed.slice("description ".length).trim();
+      return;
+    }
+    if (trimmed.startsWith("ip address ")) {
+      current.ipv4_address = trimmed.slice("ip address ".length).trim();
+      return;
+    }
+    if (trimmed === "shutdown") {
+      current.enabled = false;
+      return;
+    }
+    if (trimmed === enabledLine) {
+      current.enabled = true;
+    }
+  });
+
+  return finalizeInterfaceList(interfaceMap, fallback);
+}
+
+function parseJuniperInterfaces(runningConfigLines, fallback) {
+  const interfaceMap = cloneInterfaceMap(fallback);
+
+  const ensureInterface = (name) => {
+    if (!interfaceMap.has(name)) {
+      interfaceMap.set(name, {
+        name,
+        description: "",
+        ipv4_address: "",
+        enabled: true,
+        source: "live",
+      });
+    }
+    return interfaceMap.get(name);
+  };
+
+  runningConfigLines.forEach((rawLine) => {
+    const trimmed = String(rawLine || "").trim();
+    if (!trimmed.startsWith("set interfaces ") && !trimmed.startsWith("delete interfaces ")) {
+      return;
+    }
+    const parts = trimmed.split(/\s+/);
+    const name = parts[2];
+    if (!name) {
+      return;
+    }
+    const iface = ensureInterface(name);
+    iface.source = "live";
+
+    if (trimmed.includes(" description ")) {
+      const description = trimmed.split(" description ")[1] || "";
+      iface.description = description.replace(/^"|"$/g, "");
+      return;
+    }
+    if (trimmed.includes(" family inet address ")) {
+      iface.ipv4_address = trimmed.split(" family inet address ")[1] || "";
+      return;
+    }
+    if (trimmed === `set interfaces ${name} disable`) {
+      iface.enabled = false;
+      return;
+    }
+    if (trimmed === `delete interfaces ${name} disable`) {
+      iface.enabled = true;
+    }
+  });
+
+  return finalizeInterfaceList(interfaceMap, fallback);
+}
+
 function renderDeviceDetail(device, runningConfigLines, runningConfigError = "", runningConfigCached = false) {
   const container = document.getElementById("device-detail");
   const badge = document.getElementById("device-status-badge");
@@ -339,8 +485,10 @@ function renderDeviceDetail(device, runningConfigLines, runningConfigError = "",
   badge.textContent = translateStatus(device.status);
   badge.className = `badge ${statusClass(device.status)}`;
 
-  const interfacesHtml = device.interfaces.length
-    ? device.interfaces
+  const liveInterfaces = parseInterfaceStateFromRunningConfig(device, runningConfigLines);
+
+  const interfacesHtml = liveInterfaces.length
+    ? liveInterfaces
         .map(
           (iface) => `
             <article class="interface-card">
@@ -394,7 +542,7 @@ function renderDeviceDetail(device, runningConfigLines, runningConfigError = "",
       <section class="panel-subsection">
         <div class="panel-heading compact">
           <h3>Интерфейсы</h3>
-          <span class="caption">${device.interfaces.length} шт.</span>
+          <span class="caption">${liveInterfaces.length} шт. · текущее состояние</span>
         </div>
         <div class="interface-list">${interfacesHtml}</div>
       </section>
@@ -495,6 +643,7 @@ function populateConfigForm(device) {
   document.getElementById("config-banner").value = DEFAULT_BANNER;
   document.getElementById("config-ntp").value = "";
   buildInterfaceEditor(device.interfaces || []);
+  document.getElementById("config-help").textContent = "Эталонная конфигурация для автоматизации";
 }
 
 function collectConfigPayload() {
@@ -554,29 +703,34 @@ function renderAutomationResult(mode, result) {
   const node = document.getElementById("automation-result");
   const caption = document.getElementById("automation-result-caption");
 
-  caption.textContent = `${translateMode(mode)} · ${result.device_name || appState.selectedDeviceName}`;
+  caption.textContent = `${translateMode(mode)} ? ${result.device_name || appState.selectedDeviceName}`;
   node.classList.remove("placeholder");
 
   if (Array.isArray(result.commands)) {
     const summary = [
-      `устройство: ${result.device_name}`,
-      `пробный_запуск: ${result.dry_run ?? false}`,
-      `изменено: ${result.changed ?? false}`,
-      `будут_изменения: ${result.would_change ?? false}`,
+      `??????????: ${result.device_name}`,
+      `??????? ??????: ${result.dry_run ?? false}`,
+      `????????: ${result.changed ?? false}`,
+      `????? ?????????: ${result.would_change ?? false}`,
       "",
-      "команды:",
+      "???????:",
       ...result.commands,
     ];
 
     if (Array.isArray(result.after) && result.after.length) {
-      summary.push("", "после:", ...result.after);
+      summary.push(
+        "",
+        result.dry_run ? "????????? ????????? ????? ??????????:" : "????????? ????? ??????????:",
+        ...result.after,
+      );
     }
 
     if (Array.isArray(result.current_lines) && Array.isArray(result.expected_lines)) {
-      summary.push("", `соответствует: ${result.compliant}`, "", "расхождения:", formatResult(result.drift));
+      summary.push("", `?????????????: ${result.compliant}`, "", "???????????:", formatResult(result.drift));
     }
 
-    node.textContent = summary.join("\n");
+    node.textContent = summary.join("
+");
     return;
   }
 
@@ -586,7 +740,7 @@ function renderAutomationResult(mode, result) {
 function renderAutomationError(mode, error) {
   const node = document.getElementById("automation-result");
   const caption = document.getElementById("automation-result-caption");
-  caption.textContent = `${translateMode(mode)}: ошибка`;
+  caption.textContent = `${translateMode(mode)}: ??????`;
   node.classList.remove("placeholder");
   node.textContent = error.message;
 }

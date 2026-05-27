@@ -765,6 +765,7 @@ async def test_apply_base_configuration_dry_run_endpoint():
     assert response.json()["dry_run"] is True
     assert response.json()["changed"] is False
     assert response.json()["would_change"] is True
+    assert response.json()["before"] != response.json()["after"]
     assert before.json() == after.json()
     assert snapshots.json() == []
 

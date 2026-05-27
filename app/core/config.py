@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     bootstrap_viewer_password: str = "viewer"
     netbox_url: str | None = None
     netbox_token: str | None = None
+    netbox_timeout: float = 30.0
     celery_broker_url: str = "redis://localhost:6379/0"
     celery_result_backend: str = "redis://localhost:6379/1"
     device_username: str | None = None

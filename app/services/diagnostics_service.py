@@ -253,7 +253,7 @@ class DiagnosticsService:
                 "Authorization": f"Token {token}",
                 "Accept": "application/json",
             },
-            timeout=5.0,
+            timeout=settings.netbox_timeout,
         )
         try:
             response = client.get("/")

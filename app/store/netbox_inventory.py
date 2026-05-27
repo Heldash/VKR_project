@@ -5,6 +5,7 @@ from typing import Any
 
 import httpx
 
+from app.core.config import settings
 from app.domain.exceptions import DeviceNotFoundError, InventoryBackendError
 from app.domain.models import InterfaceSpec, MockRouter
 
@@ -30,7 +31,7 @@ class NetBoxInventoryRepository:
                 "Authorization": f"Token {token}",
                 "Accept": "application/json",
             },
-            timeout=10.0,
+            timeout=settings.netbox_timeout,
         )
 
     def __del__(self) -> None:

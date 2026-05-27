@@ -554,34 +554,33 @@ function renderAutomationResult(mode, result) {
   const node = document.getElementById("automation-result");
   const caption = document.getElementById("automation-result-caption");
 
-  caption.textContent = `${translateMode(mode)} ? ${result.device_name || appState.selectedDeviceName}`;
+  caption.textContent = `${translateMode(mode)} · ${result.device_name || appState.selectedDeviceName}`;
   node.classList.remove("placeholder");
 
   if (Array.isArray(result.commands)) {
     const summary = [
-      `??????????: ${result.device_name}`,
-      `??????? ??????: ${result.dry_run ?? false}`,
-      `????????: ${result.changed ?? false}`,
-      `????? ?????????: ${result.would_change ?? false}`,
+      `Устройство: ${result.device_name}`,
+      `Пробный запуск: ${result.dry_run ?? false}`,
+      `Изменено: ${result.changed ?? false}`,
+      `Будут изменения: ${result.would_change ?? false}`,
       "",
-      "???????:",
+      "Команды:",
       ...result.commands,
     ];
 
     if (Array.isArray(result.after) && result.after.length) {
       summary.push(
         "",
-        result.dry_run ? "????????? ????????? ????? ??????????:" : "????????? ????? ??????????:",
+        result.dry_run ? "Ожидаемое состояние после применения:" : "Состояние после применения:",
         ...result.after,
       );
     }
 
     if (Array.isArray(result.current_lines) && Array.isArray(result.expected_lines)) {
-      summary.push("", `?????????????: ${result.compliant}`, "", "???????????:", formatResult(result.drift));
+      summary.push("", `Соответствует: ${result.compliant}`, "", "Расхождения:", formatResult(result.drift));
     }
 
-    node.textContent = summary.join("
-");
+    node.textContent = summary.join("\n");
     return;
   }
 
@@ -591,7 +590,7 @@ function renderAutomationResult(mode, result) {
 function renderAutomationError(mode, error) {
   const node = document.getElementById("automation-result");
   const caption = document.getElementById("automation-result-caption");
-  caption.textContent = `${translateMode(mode)}: ??????`;
+  caption.textContent = `${translateMode(mode)}: ошибка`;
   node.classList.remove("placeholder");
   node.textContent = error.message;
 }

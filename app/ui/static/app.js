@@ -13,6 +13,33 @@ const appState = {
   selectorDevices: [],
 };
 
+const STATUS_LABELS = {
+  reachable: "доступно",
+  maintenance: "обслуживание",
+  unreachable: "недоступно",
+  queued: "в очереди",
+  running: "выполняется",
+  success: "успешно",
+  succeeded: "успешно",
+  failed: "ошибка",
+};
+
+const MODE_LABELS = {
+  preview: "предпросмотр",
+  "dry-run": "пробный запуск",
+  apply: "применение",
+  compliance: "проверка соответствия",
+  rollback: "откат",
+};
+
+function translateStatus(status) {
+  return STATUS_LABELS[status] || status;
+}
+
+function translateMode(mode) {
+  return MODE_LABELS[mode] || mode;
+}
+
 function buildInterfaceDraft(iface = {}) {
   return {
     name: iface.name || "",
@@ -121,8 +148,8 @@ function setSelectedDeviceName(deviceName) {
 function updateBatchSelectionCaption() {
   const names = Array.from(appState.selectedBatchNames);
   document.getElementById("batch-selection-caption").textContent = names.length
-    ? `${names.length} selected: ${names.join(", ")}`
-    : "No devices selected";
+    ? `Выбрано ${names.length}: ${names.join(", ")}`
+    : "Устройства не выбраны";
 }
 
 function renderDevices(devices) {
@@ -133,14 +160,14 @@ function renderDevices(devices) {
 
   document.getElementById("devices-value").textContent = String(devices.length);
   document.getElementById("devices-meta").textContent =
-    `${reachable} reachable / ${unreachable} unreachable / ${maintenance} maintenance`;
-  document.getElementById("devices-caption").textContent = `Loaded devices: ${devices.length}`;
+    `${reachable} доступно / ${unreachable} недоступно / ${maintenance} обслуживание`;
+  document.getElementById("devices-caption").textContent = `Загружено устройств: ${devices.length}`;
 
   const validNames = new Set(devices.map((device) => device.name));
   appState.selectedBatchNames = new Set([...appState.selectedBatchNames].filter((name) => validNames.has(name)));
 
   if (!devices.length) {
-    table.innerHTML = '<tr><td colspan="6" class="placeholder">No devices found.</td></tr>';
+    table.innerHTML = '<tr><td colspan="6" class="placeholder">Устройства не найдены.</td></tr>';
     updateBatchSelectionCaption();
     return;
   }
@@ -157,7 +184,7 @@ function renderDevices(devices) {
           <td><strong>${escapeHtml(device.name)}</strong><br /><span class="muted">${escapeHtml(device.platform)}</span></td>
           <td>${escapeHtml(device.site)}</td>
           <td>${escapeHtml(device.role)}</td>
-          <td><span class="badge ${statusClass(device.status)}">${escapeHtml(device.status)}</span></td>
+          <td><span class="badge ${statusClass(device.status)}">${escapeHtml(translateStatus(device.status))}</span></td>
           <td>${escapeHtml(device.management_ip)}</td>
         </tr>
       `,
@@ -201,10 +228,10 @@ function renderDevices(devices) {
 function renderProfiles(profiles) {
   const node = document.getElementById("profiles-list");
   document.getElementById("profiles-value").textContent = String(profiles.length);
-  document.getElementById("profiles-meta").textContent = "baseline templates";
+  document.getElementById("profiles-meta").textContent = "базовые шаблоны";
 
   if (!profiles.length) {
-    node.innerHTML = '<p class="placeholder">Profiles are not configured.</p>';
+    node.innerHTML = '<p class="placeholder">Профили не настроены.</p>';
     return;
   }
 
@@ -214,7 +241,7 @@ function renderProfiles(profiles) {
         <article class="stack-item">
           <header>
             <strong>${escapeHtml(profile.name)}</strong>
-            <span class="badge">${profile.interfaces.length} interfaces</span>
+            <span class="badge">${profile.interfaces.length} интерфейсов</span>
           </header>
           <p>${escapeHtml(profile.description)}</p>
         </article>
@@ -227,11 +254,11 @@ function renderJobs(jobs) {
   const node = document.getElementById("jobs-list");
   document.getElementById("jobs-value").textContent = String(jobs.length);
   document.getElementById("jobs-meta").textContent = jobs.length
-    ? `latest status: ${jobs[0].status}`
-    : "queue is empty";
+    ? `последний статус: ${translateStatus(jobs[0].status)}`
+    : "очередь пуста";
 
   if (!jobs.length) {
-    node.innerHTML = '<p class="placeholder">No jobs yet.</p>';
+    node.innerHTML = '<p class="placeholder">Задач пока нет.</p>';
     appState.selectedJobId = null;
     return;
   }
@@ -245,12 +272,12 @@ function renderJobs(jobs) {
       (job) => `
         <article class="stack-item selectable ${job.job_id === appState.selectedJobId ? "selected-item" : ""}" data-job-id="${escapeHtml(job.job_id)}">
           <header>
-            <strong>${escapeHtml(job.operation)}</strong>
-            <span class="badge ${statusClass(job.status)}">${escapeHtml(job.status)}</span>
+            <strong>${escapeHtml(translateMode(job.operation))}</strong>
+            <span class="badge ${statusClass(job.status)}">${escapeHtml(translateStatus(job.status))}</span>
           </header>
-          <p>Device: ${escapeHtml(job.device_name)}</p>
-          <p>Backend: ${escapeHtml(job.queue_backend)}${job.dry_run ? " / dry-run" : ""}</p>
-          <p class="muted">Job ID: ${escapeHtml(job.job_id)}</p>
+          <p>Устройство: ${escapeHtml(job.device_name)}</p>
+          <p>Бэкенд очереди: ${escapeHtml(job.queue_backend)}${job.dry_run ? " / пробный запуск" : ""}</p>
+          <p class="muted">ID задачи: ${escapeHtml(job.job_id)}</p>
         </article>
       `,
     )
@@ -267,14 +294,14 @@ function renderJobs(jobs) {
 function renderOperationsSummary(summary) {
   document.getElementById("operations-value").textContent = String(summary.total_operations ?? summary.total ?? 0);
   document.getElementById("operations-meta").textContent =
-    `${summary.successful_operations ?? summary.success} success / ${summary.failed_operations ?? summary.failed} failed`;
+    `${summary.successful_operations ?? summary.success} успешно / ${summary.failed_operations ?? summary.failed} с ошибкой`;
 }
 
 function renderOperations(operations) {
   const node = document.getElementById("operations-list");
 
   if (!operations.length) {
-    node.innerHTML = '<p class="placeholder">Operations have not been executed yet.</p>';
+    node.innerHTML = '<p class="placeholder">Операции ещё не выполнялись.</p>';
     return;
   }
 
@@ -283,11 +310,11 @@ function renderOperations(operations) {
       (operation) => `
         <article class="stack-item">
           <header>
-            <strong>${escapeHtml(operation.operation)}</strong>
-            <span class="badge ${statusClass(operation.status)}">${escapeHtml(operation.status)}</span>
+            <strong>${escapeHtml(translateMode(operation.operation))}</strong>
+            <span class="badge ${statusClass(operation.status)}">${escapeHtml(translateStatus(operation.status))}</span>
           </header>
-          <p>Device: ${escapeHtml(operation.device_name)}</p>
-          <p>Backend: ${escapeHtml(operation.backend)}</p>
+          <p>Устройство: ${escapeHtml(operation.device_name)}</p>
+          <p>Бэкенд: ${escapeHtml(operation.backend)}</p>
         </article>
       `,
     )
@@ -296,20 +323,20 @@ function renderOperations(operations) {
 
 function renderHealth() {
   document.getElementById("health-value").textContent = "OK";
-  document.getElementById("health-meta").textContent = "FastAPI is reachable";
+  document.getElementById("health-meta").textContent = "FastAPI доступен";
 }
 
 function renderDatabase(database) {
-  document.getElementById("database-value").textContent = database.initialized ? "READY" : "DOWN";
-  document.getElementById("database-meta").textContent = `${database.roles_count} roles / ${database.users_count} users`;
+  document.getElementById("database-value").textContent = database.initialized ? "ГОТОВО" : "НЕДОСТУПНО";
+  document.getElementById("database-meta").textContent = `${database.roles_count} ролей / ${database.users_count} пользователей`;
 }
 
 function renderDeviceDetail(device, runningConfigLines, runningConfigError = "", runningConfigCached = false) {
   const container = document.getElementById("device-detail");
   const badge = document.getElementById("device-status-badge");
   document.getElementById("device-caption").textContent = `${device.name} · ${device.management_ip}`;
-  document.getElementById("snapshots-caption").textContent = `Snapshots for ${device.name} (mock backend only)`;
-  badge.textContent = device.status;
+  document.getElementById("snapshots-caption").textContent = `Снимки состояния для ${device.name} (только mock backend)`;
+  badge.textContent = translateStatus(device.status);
   badge.className = `badge ${statusClass(device.status)}`;
 
   const interfacesHtml = device.interfaces.length
@@ -319,19 +346,19 @@ function renderDeviceDetail(device, runningConfigLines, runningConfigError = "",
             <article class="interface-card">
               <header>
                 <strong>${escapeHtml(iface.name)}</strong>
-                <span class="badge ${iface.enabled ? "success" : "error"}">${iface.enabled ? "up" : "shutdown"}</span>
+                <span class="badge ${iface.enabled ? "success" : "error"}">${iface.enabled ? "включен" : "выключен"}</span>
               </header>
-              <p>${escapeHtml(iface.description || "No description")}</p>
-              <p class="muted">${escapeHtml(iface.ipv4_address || "IP not set")}</p>
+              <p>${escapeHtml(iface.description || "Описание отсутствует")}</p>
+              <p class="muted">${escapeHtml(iface.ipv4_address || "IP не задан")}</p>
             </article>
           `,
         )
         .join("")
-    : '<p class="placeholder">No interfaces described.</p>';
+    : '<p class="placeholder">Интерфейсы не описаны.</p>';
 
   const runningConfigState = runningConfigCached
-    ? '<span class="badge warn">cached</span>'
-    : '<span class="badge success">live</span>';
+    ? '<span class="badge warn">кэш</span>'
+    : '<span class="badge success">актуально</span>';
   const runningConfigWarning = runningConfigError
     ? `<p class="placeholder ${runningConfigCached ? "" : "error-text"}">${escapeHtml(runningConfigError)}</p>`
     : "";
@@ -339,23 +366,23 @@ function renderDeviceDetail(device, runningConfigLines, runningConfigError = "",
   container.innerHTML = `
     <div class="detail-grid">
       <article class="detail-card">
-        <span class="label">Hostname</span>
+        <span class="label">Имя узла</span>
         <strong>${escapeHtml(device.hostname)}</strong>
       </article>
       <article class="detail-card">
-        <span class="label">Site</span>
+        <span class="label">Площадка</span>
         <strong>${escapeHtml(device.site)}</strong>
       </article>
       <article class="detail-card">
-        <span class="label">Role</span>
+        <span class="label">Роль</span>
         <strong>${escapeHtml(device.role)}</strong>
       </article>
       <article class="detail-card">
-        <span class="label">Platform</span>
+        <span class="label">Платформа</span>
         <strong>${escapeHtml(device.platform)}</strong>
       </article>
       <article class="detail-card">
-        <span class="label">Vendor</span>
+        <span class="label">Вендор</span>
         <strong>${escapeHtml(device.vendor)}</strong>
       </article>
       <article class="detail-card">
@@ -366,19 +393,19 @@ function renderDeviceDetail(device, runningConfigLines, runningConfigError = "",
     <div class="detail-columns">
       <section class="panel-subsection">
         <div class="panel-heading compact">
-          <h3>Interfaces</h3>
-          <span class="caption">${device.interfaces.length} items</span>
+          <h3>Интерфейсы</h3>
+          <span class="caption">${device.interfaces.length} шт.</span>
         </div>
         <div class="interface-list">${interfacesHtml}</div>
       </section>
       <section class="panel-subsection">
         <div class="panel-heading compact">
           <h3>Running-config</h3>
-          <span class="caption">Current backend view</span>
+          <span class="caption">Текущее представление backend</span>
         </div>
         <div class="running-config-state">${runningConfigState}</div>
         ${runningConfigWarning}
-        <pre class="code-block">${escapeHtml((runningConfigLines || []).join("\n") || "Empty configuration")}</pre>
+        <pre class="code-block">${escapeHtml((runningConfigLines || []).join("\n") || "Конфигурация отсутствует")}</pre>
       </section>
     </div>
   `;
@@ -388,25 +415,25 @@ function buildInterfaceEditorCard(iface, index) {
   return `
     <article class="interface-editor" data-index="${index}">
       <div class="interface-editor-header">
-        <strong>Port ${index + 1}</strong>
+        <strong>Порт ${index + 1}</strong>
         <div class="interface-editor-actions">
           <label class="checkbox-inline">
             <input type="checkbox" data-field="enabled" ${iface.enabled ? "checked" : ""} />
-            <span>Enabled</span>
+            <span>Включен</span>
           </label>
-          <button type="button" class="secondary-action remove-interface">Remove</button>
+          <button type="button" class="secondary-action remove-interface">Удалить</button>
         </div>
       </div>
       <label>
-        <span>Port name</span>
+        <span>Имя порта</span>
         <input type="text" data-field="name" value="${escapeHtml(iface.name)}" placeholder="GigabitEthernet0/0" />
       </label>
       <label>
-        <span>Description</span>
+        <span>Описание</span>
         <input type="text" data-field="description" value="${escapeHtml(iface.description || "")}" />
       </label>
       <label>
-        <span>IPv4 / prefix</span>
+        <span>IPv4 / префикс</span>
         <input type="text" data-field="ipv4_address" value="${escapeHtml(iface.ipv4_address || "")}" placeholder="10.0.12.1/30" />
       </label>
     </article>
@@ -418,7 +445,7 @@ function refreshInterfaceEditorTitles() {
     node.dataset.index = String(index);
     const title = node.querySelector(".interface-editor-header strong");
     if (title) {
-      title.textContent = `Port ${index + 1}`;
+      title.textContent = `Порт ${index + 1}`;
     }
   });
 }
@@ -429,7 +456,7 @@ function attachInterfaceEditorEvents() {
       button.closest(".interface-editor")?.remove();
       const container = document.getElementById("config-interfaces");
       if (!container.querySelector(".interface-editor")) {
-        container.innerHTML = '<p class="placeholder">No configured ports yet. Use "Add port" to build the request.</p>';
+        container.innerHTML = '<p class="placeholder">Порты ещё не добавлены. Используйте кнопку "Добавить порт".</p>';
       }
       refreshInterfaceEditorTitles();
     };
@@ -452,7 +479,7 @@ function buildInterfaceEditor(interfaces) {
   const container = document.getElementById("config-interfaces");
   const drafts = (interfaces || []).map((iface) => buildInterfaceDraft(iface));
   if (!drafts.length) {
-    container.innerHTML = '<p class="placeholder">No configured ports yet. Use "Add port" to build the request.</p>';
+    container.innerHTML = '<p class="placeholder">Порты ещё не добавлены. Используйте кнопку "Добавить порт".</p>';
     return;
   }
 
@@ -520,33 +547,33 @@ function renderTextResult(nodeId, text) {
 }
 
 function renderBatchResult(mode, result) {
-  renderTextResult("batch-result", { mode, summary: result.summary, items: result.items });
+  renderTextResult("batch-result", { mode: translateMode(mode), summary: result.summary, items: result.items });
 }
 
 function renderAutomationResult(mode, result) {
   const node = document.getElementById("automation-result");
   const caption = document.getElementById("automation-result-caption");
 
-  caption.textContent = `${mode} · ${result.device_name || appState.selectedDeviceName}`;
+  caption.textContent = `${translateMode(mode)} · ${result.device_name || appState.selectedDeviceName}`;
   node.classList.remove("placeholder");
 
   if (Array.isArray(result.commands)) {
     const summary = [
-      `device: ${result.device_name}`,
-      `dry_run: ${result.dry_run ?? false}`,
-      `changed: ${result.changed ?? false}`,
-      `would_change: ${result.would_change ?? false}`,
+      `устройство: ${result.device_name}`,
+      `пробный_запуск: ${result.dry_run ?? false}`,
+      `изменено: ${result.changed ?? false}`,
+      `будут_изменения: ${result.would_change ?? false}`,
       "",
-      "commands:",
+      "команды:",
       ...result.commands,
     ];
 
     if (Array.isArray(result.after) && result.after.length) {
-      summary.push("", "after:", ...result.after);
+      summary.push("", "после:", ...result.after);
     }
 
     if (Array.isArray(result.current_lines) && Array.isArray(result.expected_lines)) {
-      summary.push("", `compliant: ${result.compliant}`, "", "drift:", formatResult(result.drift));
+      summary.push("", `соответствует: ${result.compliant}`, "", "расхождения:", formatResult(result.drift));
     }
 
     node.textContent = summary.join("\n");
@@ -559,7 +586,7 @@ function renderAutomationResult(mode, result) {
 function renderAutomationError(mode, error) {
   const node = document.getElementById("automation-result");
   const caption = document.getElementById("automation-result-caption");
-  caption.textContent = `${mode} failed`;
+  caption.textContent = `${translateMode(mode)}: ошибка`;
   node.classList.remove("placeholder");
   node.textContent = error.message;
 }
@@ -599,15 +626,15 @@ async function refreshSelectedDeviceDetails(settings, preserveForm = false) {
     await refreshSnapshots(true);
   } catch (error) {
     document.getElementById("device-detail").innerHTML = `<p class="placeholder error-text">${escapeHtml(error.message)}</p>`;
-    document.getElementById("device-caption").textContent = "Failed to load device";
-    document.getElementById("device-status-badge").textContent = "error";
+    document.getElementById("device-caption").textContent = "Не удалось загрузить устройство";
+    document.getElementById("device-status-badge").textContent = "ошибка";
     document.getElementById("device-status-badge").className = "badge error";
   }
 }
 
 async function runAutomation(mode) {
   if (!appState.selectedDeviceName) {
-    setStatus("Select a device in the table first.", true);
+    setStatus("Сначала выберите устройство в таблице.", true);
     return;
   }
 
@@ -617,7 +644,7 @@ async function runAutomation(mode) {
   const deviceName = appState.selectedDeviceName;
 
   try {
-    setStatus(`Running ${mode} for ${deviceName}...`);
+    setStatus(`Выполняется "${translateMode(mode)}" для ${deviceName}...`);
     let path = `/automation/devices/${deviceName}/base-config/preview`;
     if (mode === "dry-run") {
       path = `/automation/devices/${deviceName}/base-config/apply?dry_run=true`;
@@ -636,16 +663,16 @@ async function runAutomation(mode) {
 
     renderAutomationResult(mode, result);
     await refreshDashboard({ preserveForm: true });
-    setStatus(`Operation ${mode} for ${deviceName} completed.`);
+    setStatus(`Операция "${translateMode(mode)}" для ${deviceName} завершена.`);
   } catch (error) {
     renderAutomationError(mode, error);
-    setStatus(`Failed to execute ${mode}: ${error.message}`, true);
+    setStatus(`Не удалось выполнить "${translateMode(mode)}": ${error.message}`, true);
   }
 }
 
 async function runBatchOperation(mode) {
   if (!appState.selectedBatchNames.size) {
-    setStatus("Select at least one device for batch mode.", true);
+    setStatus("Выберите хотя бы одно устройство для пакетного режима.", true);
     return;
   }
 
@@ -654,7 +681,7 @@ async function runBatchOperation(mode) {
   const payload = buildBatchRequest();
 
   try {
-    setStatus(`Running batch ${mode} for ${appState.selectedBatchNames.size} devices...`);
+    setStatus(`Выполняется пакетная операция "${translateMode(mode)}" для ${appState.selectedBatchNames.size} устройств...`);
     let path = "/automation/batch/base-config/preview";
     if (mode === "dry-run") {
       path = "/automation/batch/base-config/apply?dry_run=true";
@@ -669,10 +696,10 @@ async function runBatchOperation(mode) {
     const result = await requestApi(path, settings, { method: "POST", body: payload });
     renderBatchResult(mode, result);
     await refreshDashboard({ preserveForm: true });
-    setStatus(`Batch ${mode} completed.`);
+    setStatus(`Пакетная операция "${translateMode(mode)}" завершена.`);
   } catch (error) {
     renderTextResult("batch-result", error.message);
-    setStatus(`Batch ${mode} failed: ${error.message}`, true);
+    setStatus(`Пакетная операция "${translateMode(mode)}" завершилась ошибкой: ${error.message}`, true);
   }
 }
 
@@ -680,10 +707,10 @@ function renderSelectorDevices(response) {
   const node = document.getElementById("selector-results");
   const devices = response.devices || [];
   appState.selectorDevices = devices;
-  document.getElementById("selector-summary").textContent = `${response.total_devices} devices matched`;
+  document.getElementById("selector-summary").textContent = `Совпадений: ${response.total_devices}`;
 
   if (!devices.length) {
-    node.innerHTML = '<p class="placeholder">No devices matched the selector.</p>';
+    node.innerHTML = '<p class="placeholder">По селектору устройства не найдены.</p>';
     return;
   }
 
@@ -693,7 +720,7 @@ function renderSelectorDevices(response) {
         <article class="stack-item">
           <header>
             <strong>${escapeHtml(device.name)}</strong>
-            <span class="badge ${statusClass(device.status)}">${escapeHtml(device.status)}</span>
+            <span class="badge ${statusClass(device.status)}">${escapeHtml(translateStatus(device.status))}</span>
           </header>
           <p>${escapeHtml(device.site)} / ${escapeHtml(device.role)} / ${escapeHtml(device.vendor)}</p>
           <p>${escapeHtml(device.management_ip)}</p>
@@ -712,10 +739,10 @@ async function resolveSelector() {
     const response = await requestApi("/automation/selection/resolve", settings, { method: "POST", body: selector });
     renderSelectorDevices(response);
     renderTextResult("selector-result", response);
-    setStatus(`Resolved ${response.total_devices} devices from selector.`);
+    setStatus(`По селектору найдено ${response.total_devices} устройств.`);
   } catch (error) {
     renderTextResult("selector-result", error.message);
-    setStatus(`Selector resolve failed: ${error.message}`, true);
+    setStatus(`Не удалось выполнить подбор по селектору: ${error.message}`, true);
   }
 }
 
@@ -744,16 +771,16 @@ async function runSelectorOperation(mode) {
       renderSelectorDevices(response);
     }
     renderTextResult("selector-result", response);
-    setStatus(`Selector ${mode} completed.`);
+    setStatus(`Операция по селектору "${translateMode(mode)}" завершена.`);
   } catch (error) {
     renderTextResult("selector-result", error.message);
-    setStatus(`Selector ${mode} failed: ${error.message}`, true);
+    setStatus(`Операция по селектору "${translateMode(mode)}" завершилась ошибкой: ${error.message}`, true);
   }
 }
 
 async function createJob() {
   if (!appState.selectedDeviceName) {
-    setStatus("Select a device before creating a job.", true);
+    setStatus("Перед созданием задачи выберите устройство.", true);
     return;
   }
 
@@ -771,16 +798,16 @@ async function createJob() {
     appState.selectedJobId = result.job_id;
     renderTextResult("jobs-result", result);
     await refreshDashboard({ preserveForm: true });
-    setStatus(`Job ${result.job_id} created.`);
+    setStatus(`Задача ${result.job_id} создана.`);
   } catch (error) {
     renderTextResult("jobs-result", error.message);
-    setStatus(`Failed to create job: ${error.message}`, true);
+    setStatus(`Не удалось создать задачу: ${error.message}`, true);
   }
 }
 
 async function executeSelectedJob() {
   if (!appState.selectedJobId) {
-    setStatus("Select a job first.", true);
+    setStatus("Сначала выберите задачу.", true);
     return;
   }
   const settings = getSettings();
@@ -790,16 +817,16 @@ async function executeSelectedJob() {
     const result = await requestApi(`/automation/jobs/${appState.selectedJobId}/execute`, settings, { method: "POST" });
     renderTextResult("jobs-result", result);
     await refreshDashboard({ preserveForm: true });
-    setStatus(`Job ${appState.selectedJobId} executed.`);
+    setStatus(`Задача ${appState.selectedJobId} выполнена.`);
   } catch (error) {
     renderTextResult("jobs-result", error.message);
-    setStatus(`Failed to execute job: ${error.message}`, true);
+    setStatus(`Не удалось выполнить задачу: ${error.message}`, true);
   }
 }
 
 async function retrySelectedJob() {
   if (!appState.selectedJobId) {
-    setStatus("Select a job first.", true);
+    setStatus("Сначала выберите задачу.", true);
     return;
   }
   const settings = getSettings();
@@ -809,17 +836,17 @@ async function retrySelectedJob() {
     const result = await requestApi(`/automation/jobs/${appState.selectedJobId}/retry`, settings, { method: "POST" });
     renderTextResult("jobs-result", result);
     await refreshDashboard({ preserveForm: true });
-    setStatus(`Job ${appState.selectedJobId} retried.`);
+    setStatus(`Задача ${appState.selectedJobId} повторно запущена.`);
   } catch (error) {
     renderTextResult("jobs-result", error.message);
-    setStatus(`Failed to retry job: ${error.message}`, true);
+    setStatus(`Не удалось повторить задачу: ${error.message}`, true);
   }
 }
 
 function renderSnapshots(snapshots) {
   const node = document.getElementById("snapshots-list");
   if (!snapshots.length) {
-    node.innerHTML = '<p class="placeholder">No snapshots for the selected device.</p>';
+    node.innerHTML = '<p class="placeholder">Для выбранного устройства снимков нет.</p>';
     appState.selectedSnapshotId = null;
     return;
   }
@@ -834,9 +861,9 @@ function renderSnapshots(snapshots) {
         <article class="stack-item selectable ${snapshot.snapshot_id === appState.selectedSnapshotId ? "selected-item" : ""}" data-snapshot-id="${escapeHtml(snapshot.snapshot_id)}">
           <header>
             <strong>${escapeHtml(snapshot.device_name)}</strong>
-            <span class="badge">snapshot</span>
+            <span class="badge">снимок</span>
           </header>
-          <p>Snapshot ID: ${escapeHtml(snapshot.snapshot_id)}</p>
+          <p>ID снимка: ${escapeHtml(snapshot.snapshot_id)}</p>
           <p>${escapeHtml(snapshot.created_at)}</p>
         </article>
       `,
@@ -854,7 +881,7 @@ function renderSnapshots(snapshots) {
 async function refreshSnapshots(silent = false) {
   if (!appState.selectedDeviceName) {
     if (!silent) {
-      setStatus("Select a device before loading snapshots.", true);
+      setStatus("Перед загрузкой снимков выберите устройство.", true);
     }
     return;
   }
@@ -866,19 +893,19 @@ async function refreshSnapshots(silent = false) {
     renderSnapshots(result);
     if (!silent) {
       renderTextResult("snapshots-result", result);
-      setStatus(`Loaded ${result.length} snapshots for ${appState.selectedDeviceName}.`);
+      setStatus(`Загружено ${result.length} снимков для ${appState.selectedDeviceName}.`);
     }
   } catch (error) {
     renderTextResult("snapshots-result", error.message);
     if (!silent) {
-      setStatus(`Failed to load snapshots: ${error.message}`, true);
+      setStatus(`Не удалось загрузить снимки: ${error.message}`, true);
     }
   }
 }
 
 async function rollbackSelectedSnapshot() {
   if (!appState.selectedDeviceName || !appState.selectedSnapshotId) {
-    setStatus("Select a device and snapshot first.", true);
+    setStatus("Сначала выберите устройство и снимок.", true);
     return;
   }
   const settings = getSettings();
@@ -888,17 +915,17 @@ async function rollbackSelectedSnapshot() {
     const result = await requestApi(`/automation/devices/${appState.selectedDeviceName}/rollback/${appState.selectedSnapshotId}`, settings, { method: "POST" });
     renderTextResult("snapshots-result", result);
     await refreshDashboard({ preserveForm: true });
-    setStatus(`Rollback to snapshot ${appState.selectedSnapshotId} completed.`);
+    setStatus(`Откат к снимку ${appState.selectedSnapshotId} завершён.`);
   } catch (error) {
     renderTextResult("snapshots-result", error.message);
-    setStatus(`Rollback failed: ${error.message}`, true);
+    setStatus(`Откат завершился ошибкой: ${error.message}`, true);
   }
 }
 
 async function refreshDashboard(options = {}) {
   const settings = getSettings();
   saveSettings(settings);
-  setStatus("Refreshing dashboard...");
+  setStatus("Обновление панели...");
 
   try {
     const [health, database, devices, profiles, jobs, operations, operationsSummary] = await Promise.all([
@@ -924,16 +951,16 @@ async function refreshDashboard(options = {}) {
     renderOperationsSummary(operationsSummary);
     renderOperations(operations);
     await refreshSelectedDeviceDetails(settings, options.preserveForm);
-    setStatus("Dashboard refreshed. You can use device, batch, selector, jobs and snapshots scenarios.");
+    setStatus("Панель обновлена. Доступны сценарии по устройствам, пакетным операциям, селекторам, задачам и снимкам.");
   } catch (error) {
-    setStatus(`Failed to refresh dashboard: ${error.message}`, true);
+    setStatus(`Не удалось обновить панель: ${error.message}`, true);
   }
 }
 
 function resetConfigForm() {
   if (appState.selectedDevice) {
     populateConfigForm(appState.selectedDevice);
-    setStatus(`Configuration form reset from ${appState.selectedDevice.name}.`);
+    setStatus(`Форма конфигурации сброшена по данным ${appState.selectedDevice.name}.`);
   }
 }
 
@@ -965,7 +992,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("reset-config").addEventListener("click", resetConfigForm);
   document.getElementById("add-interface").addEventListener("click", () => {
     appendInterfaceEditor();
-    setStatus("Added a new port row. Fill in the interface name and IP before running automation.");
+    setStatus("Добавлена новая строка порта. Заполните имя интерфейса и IP перед запуском автоматизации.");
   });
   refreshDashboard();
 });
